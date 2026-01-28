@@ -10,17 +10,17 @@ st.title("💰 家庭記帳本")
 # --- 1. 記帳輸入區 (直接嵌在 App 裡) ---
 st.subheader("📝 新增一筆")
 
-# 這裡我已經幫您把剛剛給的網址填進去了，並加上 embedded=true 讓它完美嵌入
-google_form_url = "https://forms.gle/fsfaQKjYiLthphfCA?embedded=true"
+# 這是您提供的正確 Google 表單網址
+google_form_url = "https://forms.gle/fsfaQKjYiLthphfCA"
 
-# 使用 iframe 顯示表單，高度設為 600 讓手機好滑動
+# 使用 iframe 顯示表單
 components.iframe(google_form_url, height=600, scrolling=True)
 
 # --- 2. 顯示結果區 (讀取 Google 試算表) ---
 st.write("---")
 st.subheader("📊 最新記帳紀錄")
 
-# 重新整理按鈕 (記完帳後按一下這個，下面的表就會更新)
+# 重新整理按鈕
 if st.button("🔄 重新整理查看最新紀錄"):
     st.rerun()
 
@@ -28,11 +28,24 @@ if st.button("🔄 重新整理查看最新紀錄"):
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 try:
-    # 【關鍵注意】：
-    # Google 表單連結到試算表後，通常會自動建立一個新分頁叫做 "表單回應 1"
-    # 如果您的表格下方分頁名稱不同，請修改下面這行引號內的文字
+    # 讀取資料
+    # 請注意：如果您的試算表分頁名稱不是 "表單回應 1"，請修改這裡
     df = conn.read(worksheet="表單回應 1", ttl=0)
     
+    # 檢查資料是否為空 (這裡就是原本報錯的地方，我已經修好了)
     if not df.empty:
-        # 資料清理：通常表單的第一欄是「時間戳記」，我們把它改名或簡單處理
-        #
+        # 顯示最新的 5 筆資料 (反轉順序)
+        st.dataframe(df.tail(5).iloc[::-1], use_container_width=True)
+    else:
+        st.info("目前還沒有資料，試著填寫上面的表單看看！")
+        
+except Exception as e:
+    st.warning("⚠️ 讀取資料時發生錯誤")
+    st.markdown(f"""
+    **請檢查試算表的分頁名稱：**
+    1. 打開您的 Google 試算表
+    2. 看下方新出現的分頁是不是叫 **`表單回應 1`**？
+    3. 如果是英文介面可能叫 `Form Responses 1`，請修改程式碼第 33 行。
+    
+    錯誤訊息: {e}
+    """)
