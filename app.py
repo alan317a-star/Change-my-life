@@ -4,7 +4,9 @@ import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 from datetime import date, datetime, timedelta
+import calendar
 import time
+import requests # 新增：為了抓取天氣資料
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
@@ -111,17 +113,50 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- ⏳ 重要日倒數 (側邊欄) ---
+# --- 🌤️ 天氣功能 (使用 Open-Meteo 免費 API) ---
+@st.cache_data(ttl=600) # 設定快取 600秒 (10分鐘)，避免頻繁呼叫 API
+def get_weather():
+    try:
+        # 台中北區座標 (Latitude: 24.16, Longitude: 120.68)
+        url = "https://api.open-meteo.com/v1/forecast?latitude=24.16&longitude=120.68&current_weather=true&timezone=Asia%2FTaipei"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            temp = data['current_weather']['temperature']
+            # 簡單的天氣代碼判斷 (WMO Weather interpretation codes)
+            code = data['current_weather']['weathercode']
+            if code <= 3: icon = "🌤️" # 晴天/多雲
+            elif code <= 48: icon = "☁️" # 霧
+            elif code <= 67: icon = "🌧️" # 雨
+            elif code <= 99: icon = "⛈️" # 雷雨
+            else: icon = "🌡️"
+            return f"{icon} {temp}°C"
+        else:
+            return None
+    except:
+        return None
+
+# --- ⏳ 側邊欄：天氣 + 重要時刻 + 設定 ---
 with st.sidebar:
+    # 1. 天氣顯示
+    current_weather = get_weather()
+    if current_weather:
+        st.metric("台中北區", current_weather)
+    else:
+        st.metric("台中北區", "☁️ Loading...")
+    
+    st.write("---")
+    
+    # 2. 重要時刻
     st.header("⏳ 重要時刻")
     
-    # 1. 在一起 (2019/06/15)
+    # 在一起 (2019/06/15)
     love_start = date(2019, 6, 15)
     love_days = (taiwan_date - love_start).days
     if love_days > 0:
         st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
     
-    # 2. 寶寶出生 (114/09/12 -> 2025/09/12)
+    # 寶寶出生 (2025/09/12)
     baby_born = date(2025, 9, 12)
     baby_days = (taiwan_date - baby_born).days
     if baby_days > 0:
@@ -132,10 +167,12 @@ with st.sidebar:
         st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
 
     st.write("---")
+    
+    # 3. 預算設定
     st.header("⚙️ 遊戲設定 (預算)")
     monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
 
-# --- 🛡️ 錢包血量條 (置頂顯示) ---
+# --- 🛡️ 錢包血量條 (置頂顯示 - 3 欄) ---
 if not df.empty:
     current_month_df = df[df["Month"] == current_month_str]
     current_spent = current_month_df["Amount"].sum()
@@ -148,22 +185,33 @@ else:
     percent = 0
 
 st.subheader(f"🛡️ 本月錢包防禦戰")
-col_bar1, col_bar2 = st.columns([3, 1])
+
+# 計算「今日可用」
+_, last_day_of_month = calendar.monthrange(taiwan_date.year, taiwan_date.month)
+days_remaining_in_month = last_day_of_month - taiwan_date.day + 1
+remaining_budget = monthly_budget - current_spent
+daily_budget = remaining_budget / days_remaining_in_month if days_remaining_in_month > 0 else 0
+
+col_bar1, col_bar2, col_bar3 = st.columns([2, 1, 1])
+
 with col_bar1:
     if percent < 0.5:
-        status_text = "🟢 勇者狀態良好，繼續冒險！"
+        status_text = "🟢 勇者狀態良好！"
     elif percent < 0.8:
-        status_text = "🟡 遭遇小怪，錢包受傷中..."
+        status_text = "🟡 遭遇小怪，受傷中..."
     elif percent < 1.0:
-        status_text = "🔴 BOSS 戰預警！血量告急！"
+        status_text = "🔴 BOSS 戰預警！告急！"
     else:
-        status_text = "☠️ GAME OVER... 錢包已陣亡"
+        status_text = "☠️ 錢包已陣亡"
     st.markdown(f'<div class="game-status">{status_text}</div>', unsafe_allow_html=True)
     display_percent = min(percent, 1.0)
     st.progress(display_percent)
+
 with col_bar2:
-    remaining = monthly_budget - current_spent
-    st.metric("剩餘血量", f"${remaining:,.0f}", delta=f"-${current_spent:,.0f}", delta_color="inverse")
+    st.metric("剩餘血量", f"${remaining_budget:,.0f}", delta=f"-${current_spent:,.0f}", delta_color="inverse")
+
+with col_bar3:
+    st.metric("📅 今日可用", f"${daily_budget:,.0f}", help="剩餘預算 ÷ 本月剩餘天數")
 
 st.write("---")
 
@@ -231,7 +279,7 @@ with tab1:
     
     st.write("---")
     
-    # --- 修改點：使用 Expander 收納刪除功能 ---
+    # --- 記錯帳管理區 ---
     with st.expander("記錯帳按這邊", expanded=False):
         # 1. 快速復原 (Undo)
         st.caption("👇 剛剛記錯了嗎？這裡可以快速復原上一筆")
