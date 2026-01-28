@@ -17,7 +17,7 @@ except ImportError:
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (含卡片優化) ---
+# --- CSS 美化 ---
 st.markdown("""
     <style>
     /* 輸入框與文字設定 (iPhone 黑字優化) */
@@ -127,7 +127,6 @@ try:
         df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
         df["Date_dt"] = pd.to_datetime(df["Date"], errors="coerce")
         df["Month"] = df["Date_dt"].dt.strftime("%Y-%m")
-        df["Date_Only"] = df["Date_dt"].dt.date
         df["Note"] = df["Note"].fillna("")
 except Exception:
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
@@ -166,7 +165,7 @@ with st.sidebar:
     except:
         loc = None
 
-    weather_text = "☁️ 定位中..."
+    weather_text = "☁️ 定測中..."
     location_name = "偵測中"
     
     if loc:
@@ -204,19 +203,10 @@ with st.sidebar:
         st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
 
     st.write("---")
-    
-    st.header("🇯🇵 匯率換算")
-    jpy_rate = st.number_input("目前匯率 (JPY -> TWD)", value=0.22, step=0.001, format="%.3f")
-    jpy_amount = st.number_input("輸入日幣 (¥)", value=0, step=100)
-    if jpy_amount > 0:
-        twd_amount = jpy_amount * jpy_rate
-        st.write(f"≈ 台幣 **${twd_amount:,.0f}**")
-        
-    st.write("---")
     st.header("⚙️ 遊戲設定 (預算)")
     monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
 
-# --- 🛡️ 錢包血量條 ---
+# --- 🛡️ 錢包防禦戰 ---
 if not df.empty:
     current_month_df = df[df["Month"] == current_month_str]
     current_spent = current_month_df["Amount"].sum()
@@ -228,7 +218,6 @@ if monthly_budget > 0:
 else:
     percent = 0
 
-# --- 修改點：標題簡化為「錢包防禦戰」 ---
 st.subheader(f"🛡️ 錢包防禦戰")
 
 _, last_day_of_month = calendar.monthrange(taiwan_date.year, taiwan_date.month)
@@ -362,7 +351,7 @@ with tab1:
                         st.error(f"刪除失敗: {e}")
 
 
-# === 分頁 2: 分析 (只留圓餅圖) ===
+# === 分頁 2: 分析 ===
 with tab2:
     if not df.empty and len(df) > 0:
         available_months = sorted(df["Month"].dropna().unique(), reverse=True)
@@ -386,14 +375,13 @@ with tab2:
             st.subheader("🥧 支出分類占比")
             pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
             
-            # 美編：設定溫馨的配色 (馬卡龍色系)
             fig = px.pie(
                 pie_data, 
                 values="Amount", 
                 names="Category", 
                 title=chart_title, 
                 hole=0.4,
-                color_discrete_sequence=px.colors.qualitative.Pastel # 使用柔和配色
+                color_discrete_sequence=px.colors.qualitative.Pastel
             )
             fig.update_traces(textposition='inside', textinfo='percent+label')
             st.plotly_chart(fig, use_container_width=True)
@@ -408,21 +396,17 @@ with tab3:
     st.subheader("📋 詳細紀錄列表")
     
     if not df.empty:
-        # 準備資料
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
         
-        # 美編：改用卡片 (Container) 迴圈顯示
-        for index, row in display_df.head(20).iterrows(): # 預設先顯示前20筆
+        for index, row in display_df.head(20).iterrows():
             with st.container(border=True): 
                 c1, c2 = st.columns([3, 1]) 
                 
                 with c1:
-                    # 分類與日期
                     st.markdown(f'<div class="card-title">{row["Category"]}</div>', unsafe_allow_html=True)
                     st.caption(f"{row['Date']} | {row['Note']}")
                 
                 with c2:
-                    # 金額
                     st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
         
         if len(display_df) > 20:
