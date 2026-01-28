@@ -47,18 +47,36 @@ st.markdown("""
     /* 進度條文字 */
     .game-status { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
 
-    /* 跳窗 (Toast) 設定 */
+    /* ✨ 跳窗 (Toast) 完美置中優化 ✨ */
     div[data-testid="stToast"] {
         width: 90vw !important; max-width: 500px !important;
         background-color: #ffffff !important;
         border: 2px solid #FF4B4B !important;
         border-radius: 50px !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important; /* 增加浮起陰影 */
         z-index: 999999 !important;
+        
+        /* 關鍵置中語法 */
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 15px 10px !important; 
     }
-    div[data-testid="stToast"] * {
+    
+    /* 強制內容容器與文字置中 */
+    div[data-testid="stToast"] > div {
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    /* 文字樣式 */
+    div[data-testid="stToast"] p {
         color: #000000 !important;
-        font-size: 18px !important;
-        font-weight: bold !important;
+        font-size: 19px !important;
+        font-weight: 800 !important; /* 特粗體 */
+        margin: 0 !important;
+        text-align: center !important;
     }
     
     /* 分頁籤 (Tabs) 字體放大 */
@@ -171,7 +189,7 @@ with tab1:
                     # 震動回饋
                     components.html("<script>window.navigator.vibrate([100,50,100]);</script>", height=0, width=0)
                     
-                    # 🌟 這裡就是修改後的標語，一行且明顯
+                    # 🌟 這裡會顯示精美的置中跳窗
                     st.toast("開始記帳，就是成功的開始！")
                     st.success(f"✅ 已記錄：${amount_val} — **開始記帳，就是成功的開始！**")
                     
