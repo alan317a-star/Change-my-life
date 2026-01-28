@@ -88,14 +88,14 @@ tab1, tab2, tab3 = st.tabs(["📝 記帳", "📊 分析", "📋 列表"])
 
 # === 分頁 1: 記帳 ===
 with tab1:
+    st.markdown("### 😈 小壞蛋，錢要花的值得！")
     with st.form("entry_form", clear_on_submit=True):
-        f_col1, f_col2 = st.columns(2)
-        with f_col1:
-            d_val = st.date_input("📅 日期", taiwan_date)
-        with f_col2:
-            # 這裡更新為大眾常用的記帳分類
-            c_val = st.selectbox("📂 分類", [
-                ""🍔 飲食 (三餐/飲料)",
+        col1, col2 = st.columns(2)
+        with col1:
+            date_val = st.date_input("📅 日期", taiwan_date)
+        with col2:
+            cat_val = st.selectbox("📂 分類", [
+                "🍔 飲食 (三餐/飲料)",
                 "🛒 日用 (超市/藥妝)",
                 "🚗 交通 (車票/加油)",
                 "🏠 居家 (房貸/水電)",
@@ -108,8 +108,8 @@ with tab1:
                 "💸 其他"
             ])
             
-        a_val = st.number_input("💲 金額", min_value=0, step=10)
-        n_val = st.text_input("📝 備註 (詳細記錄謝謝❗)")
+        amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
+        note_val = st.text_input("📝 備註 (詳細記錄謝謝❗ )")
         
         st.markdown('<div class="save-btn">', unsafe_allow_html=True)
         if st.form_submit_button("💾 儲存紀錄"):
@@ -148,4 +148,5 @@ with st.sidebar.expander("🗑️ 刪除最後一筆紀錄"):
         if not raw.empty:
             conn.update(worksheet="Expenses", data=raw.iloc[:-1])
             st.rerun()
+
 
