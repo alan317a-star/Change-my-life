@@ -90,4 +90,32 @@ tab1, tab2 = st.tabs(["📝 快速記帳", "📋 消費清單"])
 with tab1:
     with st.form("entry_form", clear_on_submit=True):
         date_v = st.date_input("日期", today)
-        cat_v = st.selectbox("分類", ["🍔
+        cat_v = st.selectbox("分類", ["🍔 飲食", "🛒 日用", "👶 寶寶", "🚗 交通", "🇯🇵 旅遊", "💸 其他"])
+        amt_v = st.number_input("金額", min_value=0, step=1)
+        note_v = st.text_input("備註")
+        
+        if st.form_submit_button("💾 儲存紀錄"):
+            new_data = pd.DataFrame([{"Date": str(date_v), "Category": cat_v, "Amount": amt_v, "Note": note_v}])
+            updated_df = pd.concat([df, new_data], ignore_index=True)
+            conn.update(worksheet="Expenses", data=updated_df)
+            st.success("✅ 存入雲端成功！")
+            time.sleep(1)
+            st.rerun()
+
+with tab2:
+    st.subheader("📜 最近 15 筆紀錄")
+    if not df.empty:
+        # 顯示卡片式清單
+        display_df = df.sort_values("Date", ascending=False).head(15)
+        for _, row in display_df.iterrows():
+            st.markdown(f"""
+            <div class="card-container">
+                <div style="display: flex; justify-content: space-between;">
+                    <span class="card-title">{row['Category']}</span>
+                    <span class="card-amount">${row['Amount']:,.0f}</span>
+                </div>
+                <div class="card-note">{row['Date']} | {row['Note']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("尚無消費紀錄")
