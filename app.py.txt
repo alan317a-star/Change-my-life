@@ -1,51 +1,78 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+from datetime import date
 
-# 頁面基本設定
-st.set_page_config(page_title="家庭記帳本", layout="centered")
-st.title("💰 家庭記帳本")
+# --- 頁面設定 ---
+st.set_page_config(page_title="家庭與旅遊帳本", layout="centered")
 
-# --- 1. 記帳輸入區 (直接嵌在 App 裡) ---
-st.subheader("📝 新增一筆")
+# --- CSS 美化 (大按鈕、優化排版) ---
+st.markdown("""
+    <style>
+    .stTextInput input, .stNumberInput input, .stSelectbox, .stDateInput { font-size: 18px !important; }
+    div.stButton > button {
+        width: 100%; height: 3.5em; font-size: 22px !important; font-weight: bold;
+        background-color: #FF4B4B; color: white; border-radius: 10px; border: none; margin-top: 20px;
+    }
+    div.stButton > button:hover { background-color: #E03A3A; color: white; }
+    </style>
+""", unsafe_allow_html=True)
 
-# 這是您提供的正確 Google 表單網址
-google_form_url = "https://forms.gle/fsfaQKjYiLthphfCA"
+st.title("💰 家庭與旅遊帳本")
 
-# 使用 iframe 顯示表單
-components.iframe(google_form_url, height=600, scrolling=True)
-
-# --- 2. 顯示結果區 (讀取 Google 試算表) ---
-st.write("---")
-st.subheader("📊 最新記帳紀錄")
-
-# 重新整理按鈕
-if st.button("🔄 重新整理查看最新紀錄"):
-    st.rerun()
-
-# 建立連線
+# --- 建立連線 (使用 Secrets 裡的機器人金鑰) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-try:
-    # 讀取資料
-    # 請注意：如果您的試算表分頁名稱不是 "表單回應 1"，請修改這裡
-    df = conn.read(worksheet="表單回應 1", ttl=0)
-    
-    # 檢查資料是否為空 (這裡就是原本報錯的地方，我已經修好了)
-    if not df.empty:
-        # 顯示最新的 5 筆資料 (反轉順序)
-        st.dataframe(df.tail(5).iloc[::-1], use_container_width=True)
-    else:
-        st.info("目前還沒有資料，試著填寫上面的表單看看！")
+# --- 記帳輸入區 ---
+st.markdown("### 📝 新增一筆支出")
+
+with st.container():
+    with st.form("entry_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            date_val = st.date_input("📅 日期", date.today())
+        with col2:
+            cat_val = st.selectbox("📂 分類", [
+                "👶 育兒 (尿布/奶粉)", "✈️ 日本行 (機票/住宿)", "🍣 日本行 (吃喝玩樂)", 
+                "🚗 交通/加油", "🏠 家用雜支", "👔 個人/治裝", "💰 其他"
+            ])
+            
+        amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
+        note_val = st.text_input("📝 備註 (選填)")
         
-except Exception as e:
-    st.warning("⚠️ 讀取資料時發生錯誤")
-    st.markdown(f"""
-    **請檢查試算表的分頁名稱：**
-    1. 打開您的 Google 試算表
-    2. 看下方新出現的分頁是不是叫 **`表單回應 1`**？
-    3. 如果是英文介面可能叫 `Form Responses 1`，請修改程式碼第 33 行。
-    
-    錯誤訊息: {e}
-    """)
+        submitted = st.form_submit_button("💾 確認儲存")
+        
+        if submitted:
+            if amount_val > 0:
+                try:
+                    # 讀取現有資料
+                    df = conn.read(worksheet="Expenses", ttl=0)
+                    if df.empty: df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
+                    
+                    # 建立新資料並寫入
+                    new_data = pd.DataFrame([{"Date": str(date_val), "Category": cat_val, "Amount": amount_val, "Note": note_val}])
+                    updated_df = pd.concat([df, new_data], ignore_index=True)
+                    
+                    conn.update(worksheet="Expenses", data=updated_df)
+                    st.success(f"✅ 已記錄：${amount_val} ({cat_val})")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"寫入失敗：{e}")
+            else:
+                st.warning("⚠️ 金額不能為 0")
+
+# --- 顯示紀錄區 ---
+st.write("---")
+st.markdown("### 📊 最近 5 筆紀錄")
+
+try:
+    df = conn.read(worksheet="Expenses", ttl=0)
+    if not df.empty:
+        st.dataframe(df.tail(5).iloc[::-1], use_container_width=True, hide_index=True)
+        # 計算總金額
+        total = pd.to_numeric(df["Amount"], errors='coerce').sum()
+        st.metric("累積總支出", f"${total:,.0f}")
+    else:
+        st.info("目前沒有資料，快記下第一筆吧！")
+except:
+    st.info("連線中...如果這是第一次使用，請先新增一筆資料。")
