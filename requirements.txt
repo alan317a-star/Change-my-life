@@ -1,6 +1,5 @@
 streamlit
 streamlit-gsheets
-pandas
 plotly
 requests
 streamlit-js-eval
