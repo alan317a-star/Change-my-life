@@ -13,9 +13,15 @@ st.markdown("""
     .stTextInput input, .stNumberInput input, .stSelectbox, .stDateInput { font-size: 18px !important; }
     div.stButton > button {
         width: 100%; height: 3.5em; font-size: 22px !important; font-weight: bold;
-        background-color: #FF4B4B; color: white; border-radius: 10px; border: none; margin-top: 20px;
+        border-radius: 10px; border: none; margin-top: 10px;
     }
-    div.stButton > button:hover { background-color: #E03A3A; color: white; }
+    /* 綠色確認按鈕 */
+    .save-btn > button { background-color: #FF4B4B; color: white; }
+    .save-btn > button:hover { background-color: #E03A3A; color: white; }
+    
+    /* 灰色刪除按鈕 */
+    .del-btn > button { background-color: #6c757d; color: white; }
+    .del-btn > button:hover { background-color: #5a6268; color: white; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -56,8 +62,10 @@ with st.expander("📝 新增一筆支出", expanded=True):
         amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
         note_val = st.text_input("📝 備註 (選填)")
         
-        # [修復重點] 確保這一行是完整的，沒有斷掉
+        # 使用自訂 class 來控制按鈕顏色
+        st.markdown('<div class="save-btn">', unsafe_allow_html=True)
         submitted = st.form_submit_button("💾 確認儲存")
+        st.markdown('</div>', unsafe_allow_html=True)
         
         if submitted:
             if amount_val > 0:
@@ -76,14 +84,71 @@ with st.expander("📝 新增一筆支出", expanded=True):
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     conn.update(worksheet="Expenses", data=updated_df)
                     
-                    st.success(f"✅ 已記錄：${amount_val} ({full_timestamp})")
+                    st.success(f"✅ 已記錄：${amount_val}")
                     st.rerun()
                 except Exception as e:
                     st.error(f"寫入失敗：{e}")
             else:
                 st.warning("⚠️ 金額不能為 0")
 
-# --- 5. 圓餅圖分析區 ---
+# --- 5. 🗑️ 刪除/管理區 (新功能) ---
+# 只有當有資料時才顯示刪除選項
+if not df.empty:
+    with st.expander("🗑️ 管理與刪除紀錄", expanded=False):
+        st.warning("⚠️ 刪除後無法復原，請小心操作")
+        
+        # 1. 快速刪除最後一筆
+        st.markdown('<div class="del-btn">', unsafe_allow_html=True)
+        if st.button("↩️ 刪除「最後一筆」紀錄 (Undo)"):
+            try:
+                # 讀取原始資料
+                raw_df = conn.read(worksheet="Expenses", ttl=0)
+                if not raw_df.empty:
+                    # 刪除最後一行 (使用 index slicing)
+                    updated_df = raw_df.iloc[:-1]
+                    conn.update(worksheet="Expenses", data=updated_df)
+                    st.success("✅ 已刪除最後一筆資料！")
+                    st.rerun()
+                else:
+                    st.info("已經沒有資料可以刪除了")
+            except Exception as e:
+                st.error(f"刪除失敗: {e}")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # 2. 指定刪除某幾筆
+        # 製作一個好讀的選單清單： "ID: 日期 - 分類 - 金額"
+        # 我們使用原始 df 的 index 來確保刪對行
+        delete_options = [
+            f"{i}: {row['Date']} | {row['Category']} | ${row['Amount']} | {row['Note']}" 
+            for i, row in df.iterrows()
+        ]
+        
+        # 這裡會選到的是一個字串，我們需要解析出前面的 index
+        selected_item = st.selectbox("🔍 選擇要刪除的特定紀錄：", ["(請選擇)"] + list(reversed(delete_options)))
+        
+        st.markdown('<div class="del-btn">', unsafe_allow_html=True)
+        if st.button("❌ 確認刪除此筆紀錄"):
+            if selected_item != "(請選擇)":
+                try:
+                    # 解析出 index (冒號前面的數字)
+                    index_to_drop = int(selected_item.split(":")[0])
+                    
+                    raw_df = conn.read(worksheet="Expenses", ttl=0)
+                    # 透過 index 刪除該行
+                    updated_df = raw_df.drop(index_to_drop)
+                    
+                    conn.update(worksheet="Expenses", data=updated_df)
+                    st.success(f"✅ 已刪除紀錄：{selected_item}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"刪除失敗: {e}")
+            else:
+                st.warning("請先選擇一筆資料")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 6. 圓餅圖分析區 ---
 st.write("---")
 st.subheader("📊 月份支出分析")
 
@@ -108,7 +173,6 @@ if not df.empty and len(df) > 0:
         if total_spent > 0:
             pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
             fig = px.pie(pie_data, values="Amount", names="Category", title=chart_title, hole=0.4)
-            # [修復重點] 這裡的括號已經補上，圓餅圖不會再報錯了
             fig.update_traces(textposition='inside', textinfo='percent+label')
             st.plotly_chart(fig, use_container_width=True)
         else:
@@ -116,7 +180,7 @@ if not df.empty and len(df) > 0:
 else:
     st.info("尚無資料")
 
-# --- 6. 詳細列表 ---
+# --- 7. 詳細列表 ---
 st.write("---")
 with st.expander("📋 查看詳細紀錄列表", expanded=True):
     if not df.empty:
