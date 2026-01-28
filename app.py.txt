@@ -1,13 +1,13 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-import plotly.express as px  # 引入繪圖套件
+import plotly.express as px
 from datetime import date
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="家庭與旅遊帳本", layout="centered")
 
-# --- CSS 美化 ---
+# --- CSS 美化 (手機版優化) ---
 st.markdown("""
     <style>
     .stTextInput input, .stNumberInput input, .stSelectbox, .stDateInput { font-size: 18px !important; }
@@ -21,29 +21,25 @@ st.markdown("""
 
 st.title("💰 家庭與旅遊帳本")
 
-# --- 2. 建立連線 ---
+# --- 2. 建立連線 (使用 Secrets) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 3. 讀取與處理資料 (關鍵步驟) ---
+# --- 3. 讀取與處理資料 ---
 try:
     df = conn.read(worksheet="Expenses", ttl=0)
     if df.empty:
         df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     else:
-        # 【重要】把資料轉成正確格式，才能畫圖
-        # 1. 金額轉為數字 (遇到無法轉換的變成 0)
+        # 資料轉型：金額轉數字，日期轉時間格式
         df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
-        # 2. 日期轉為時間格式
         df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-        # 3. 建立一個「月份」欄位 (例如 2024-02) 用來篩選
-        df["Month"] = df["Date"].dt.strftime("%Y-%m")
-        # 4. 處理空值
+        df["Month"] = df["Date"].dt.strftime("%Y-%m") # 增加月份欄位
         df["Note"] = df["Note"].fillna("")
 except Exception:
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
 
-# --- 4. 記帳輸入區 ---
-with st.expander("📝 新增一筆支出", expanded=False): # 用摺疊區塊讓畫面乾淨點
+# --- 4. 記帳輸入區 (摺疊選單) ---
+with st.expander("📝 新增一筆支出", expanded=False):
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -62,7 +58,7 @@ with st.expander("📝 新增一筆支出", expanded=False): # 用摺疊區塊�
         if submitted:
             if amount_val > 0:
                 try:
-                    # 寫入時轉回字串處理，避免格式跑掉
+                    # 準備新資料 (轉回字串寫入比較安全)
                     new_data = pd.DataFrame([{
                         "Date": str(date_val), 
                         "Category": cat_val, 
@@ -70,12 +66,70 @@ with st.expander("📝 新增一筆支出", expanded=False): # 用摺疊區塊�
                         "Note": note_val
                     }])
                     
-                    # 重新讀取原始資料(避免格式衝突)並合併
+                    # 重新讀取並合併
                     raw_df = conn.read(worksheet="Expenses", ttl=0)
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     
+                    # 寫入 Google 表格
                     conn.update(worksheet="Expenses", data=updated_df)
                     st.success(f"✅ 已記錄：${amount_val}")
                     st.rerun()
                 except Exception as e:
-                    st.error(
+                    st.error(f"寫入失敗：{e}")
+            else:
+                st.warning("⚠️ 金額不能為 0")
+
+# --- 5. 📊 圓餅圖分析區 ---
+st.write("---")
+st.subheader("📊 月份支出分析")
+
+if not df.empty and len(df) > 0:
+    # 找出所有月份
+    available_months = sorted(df["Month"].dropna().unique(), reverse=True)
+    
+    col_filter1, col_filter2 = st.columns([1, 2])
+    with col_filter1:
+        # 月份篩選器
+        if len(available_months) > 0:
+            selected_month = st.selectbox("🗓️ 選擇月份", ["全部"] + list(available_months))
+        else:
+            selected_month = "全部"
+            
+    # 篩選資料
+    if selected_month == "全部":
+        plot_df = df
+        chart_title = "📅 所有時間的支出比例"
+    else:
+        plot_df = df[df["Month"] == selected_month]
+        chart_title = f"📅 {selected_month} 支出比例"
+
+    # 計算總額
+    total_spent = plot_df["Amount"].sum()
+    
+    with col_filter2:
+        st.metric("總支出", f"${total_spent:,.0f}")
+
+    if total_spent > 0:
+        # 繪製圓餅圖
+        pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
+        fig = px.pie(
+            pie_data, 
+            values="Amount", 
+            names="Category", 
+            title=chart_title,
+            hole=0.4
+        )
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("查無此月份資料")
+else:
+    st.info("目前還沒有資料，快記下第一筆吧！")
+
+# --- 6. 詳細列表 ---
+st.write("---")
+with st.expander("📋 查看詳細紀錄列表", expanded=True):
+    if not df.empty:
+        # 顯示前整理一下欄位
+        display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
