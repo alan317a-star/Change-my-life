@@ -3,6 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import plotly.express as px
 from datetime import date, datetime, timedelta
+import time # 引入時間套件，為了讓鼓勵訊息停留一下
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
@@ -54,7 +55,6 @@ with st.expander("😈 紅字小壞蛋，錢要花的值得！", expanded=True):
         with col1:
             date_val = st.date_input("📅 日期", taiwan_date)
         with col2:
-            # 修改點：改為通用的大眾化分類
             cat_val = st.selectbox("📂 分類", [
                 "🍔 飲食 (三餐/飲料)",
                 "🛒 日用 (超市/藥妝)",
@@ -94,95 +94,6 @@ with st.expander("😈 紅字小壞蛋，錢要花的值得！", expanded=True):
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     conn.update(worksheet="Expenses", data=updated_df)
                     
-                    st.success(f"✅ 已記錄：${amount_val}")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"寫入失敗：{e}")
-            else:
-                st.warning("⚠️ 金額不能為 0")
-
-# --- 5. 🗑️ 管理與刪除紀錄 ---
-if not df.empty:
-    with st.expander("🗑️ 管理與刪除紀錄", expanded=False):
-        st.warning("⚠️ 刪除後無法復原，請小心操作")
-        
-        # 1. 快速刪除最後一筆
-        st.markdown('<div class="del-btn">', unsafe_allow_html=True)
-        if st.button("↩️ 刪除「最後一筆」紀錄 (Undo)"):
-            try:
-                raw_df = conn.read(worksheet="Expenses", ttl=0)
-                if not raw_df.empty:
-                    updated_df = raw_df.iloc[:-1]
-                    conn.update(worksheet="Expenses", data=updated_df)
-                    st.success("✅ 已刪除最後一筆資料！")
-                    st.rerun()
-                else:
-                    st.info("已經沒有資料可以刪除了")
-            except Exception as e:
-                st.error(f"刪除失敗: {e}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.markdown("---")
-        
-        # 2. 指定刪除
-        delete_options = [
-            f"{i}: {row['Date']} | {row['Category']} | ${row['Amount']} | {row['Note']}" 
-            for i, row in df.iterrows()
-        ]
-        
-        selected_item = st.selectbox("🔍 選擇要刪除的特定紀錄：", ["(請選擇)"] + list(reversed(delete_options)))
-        
-        st.markdown('<div class="del-btn">', unsafe_allow_html=True)
-        if st.button("❌ 確認刪除此筆紀錄"):
-            if selected_item != "(請選擇)":
-                try:
-                    index_to_drop = int(selected_item.split(":")[0])
-                    raw_df = conn.read(worksheet="Expenses", ttl=0)
-                    updated_df = raw_df.drop(index_to_drop)
-                    conn.update(worksheet="Expenses", data=updated_df)
-                    st.success(f"✅ 已刪除紀錄：{selected_item}")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"刪除失敗: {e}")
-            else:
-                st.warning("請先選擇一筆資料")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# --- 6. 圓餅圖分析區 ---
-st.write("---")
-st.subheader("📊 月份支出分析")
-
-if not df.empty and len(df) > 0:
-    available_months = sorted(df["Month"].dropna().unique(), reverse=True)
-    if len(available_months) > 0:
-        col_filter1, col_filter2 = st.columns([1, 2])
-        with col_filter1:
-            selected_month = st.selectbox("🗓️ 選擇月份", ["全部"] + list(available_months))
-        
-        if selected_month == "全部":
-            plot_df = df
-            chart_title = "📅 所有時間的支出比例"
-        else:
-            plot_df = df[df["Month"] == selected_month]
-            chart_title = f"📅 {selected_month} 支出比例"
-
-        total_spent = plot_df["Amount"].sum()
-        with col_filter2:
-            st.metric("總支出", f"${total_spent:,.0f}")
-
-        if total_spent > 0:
-            pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
-            fig = px.pie(pie_data, values="Amount", names="Category", title=chart_title, hole=0.4)
-            fig.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("查無此月份資料")
-else:
-    st.info("尚無資料")
-
-# --- 7. 詳細列表 ---
-st.write("---")
-with st.expander("📋 查看詳細紀錄列表", expanded=True):
-    if not df.empty:
-        display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+                    # --- 修改點：這裡加入了激勵人心的跳窗通知 ---
+                    st.toast("🌈 一切會更好，請繼續努力！", icon="💪")
+                    st.success(f"✅ 已
