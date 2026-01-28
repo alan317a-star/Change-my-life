@@ -9,7 +9,7 @@ import time
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (跳窗單行 + 星星平衡版) ---
+# --- CSS 美化 (極簡文字版) ---
 st.markdown("""
     <style>
     /* 1. 輸入框設定 */
@@ -51,18 +51,18 @@ st.markdown("""
         margin-bottom: 5px;
     }
 
-    /* 5. Toast 跳窗置中 + 強制黑字 + 寬度優化 */
+    /* 5. Toast 跳窗置中 + 純文字風格 */
     div[data-testid="stToast"] {
         position: fixed !important;
         top: 50% !important;
         left: 50% !important;
         transform: translate(-50%, -50%) !important;
-        width: 95vw !important; /* 加寬到 95% 確保星星不換行 */
+        width: 90vw !important;
         max-width: 500px !important;
-        padding: 20px !important;
-        border-radius: 15px !important;
+        padding: 15px 25px !important; /* 調整內距讓文字更緊湊 */
+        border-radius: 50px !important; /* 改成膠囊狀，看起來更現代 */
         background-color: #ffffff !important;
-        box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
+        box-shadow: 0 4px 30px rgba(0,0,0,0.3) !important;
         text-align: center !important;
         z-index: 999999 !important;
         border: 2px solid #FF4B4B !important;
@@ -71,13 +71,14 @@ st.markdown("""
     div[data-testid="stToast"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
-        font-size: 20px !important; 
+        font-size: 20px !important;
         font-weight: bold !important;
+        font-family: sans-serif !important;
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
         justify-content: center !important;
-        white-space: nowrap !important; /* 強制單行 */
+        white-space: nowrap !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -202,9 +203,9 @@ with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
                     """
                     components.html(vibration_script, height=0, width=0)
                     
-                    # --- 修改點：前後呼應的星星 + 單行 ---
-                    st.toast("🌟 記帳的開始，就是成功的開始！ 🌟", icon="✨")
-                    st.success(f"✅ 已記錄：${amount_val}\n\n🌟 記帳的開始，就是成功的開始！ 🌟")
+                    # --- 修改點：移除圖示與星星，只留純文字 ---
+                    st.toast("記帳的開始，就是成功的開始！")
+                    st.success(f"✅ 已記錄：${amount_val}\n\n記帳的開始，就是成功的開始！")
                     
                     time.sleep(1.5)
                     st.rerun()
@@ -226,7 +227,7 @@ if not df.empty:
                     updated_df = raw_df.iloc[:-1]
                     conn.update(worksheet="Expenses", data=updated_df)
                     
-                    st.toast("↩️ 已復原 (刪除成功)", icon="✅")
+                    st.toast("已復原 (刪除成功)")
                     time.sleep(1.5)
                     st.rerun()
                 else:
