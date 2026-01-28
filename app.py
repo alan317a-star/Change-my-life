@@ -1,66 +1,53 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-import plotly.express as px
 from datetime import date, datetime, timedelta
-import calendar
-import time
 import requests
+import time
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (iPhone 黑字與卡片樣式優化) ---
+# --- 2. CSS 美化 (iPhone 黑字與卡片樣式優化) ---
 st.markdown("""
     <style>
+    /* 輸入框黑字優化 */
     .stTextInput input, .stNumberInput input, .stDateInput input {
         font-size: 18px !important;
         background-color: #fff9c4 !important;
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
-    div.stButton > button {
-        width: 100%; height: 3.5em; font-size: 22px !important; font-weight: bold;
-        border-radius: 10px; margin-top: 10px;
+    /* 卡片式列表樣式 */
+    .card-container {
+        border: 1px solid #eee;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        background-color: white;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
     }
-    .save-btn > button { background-color: #FF4B4B; color: white; }
     .card-title { font-size: 18px; font-weight: bold; color: #333; }
     .card-amount { font-size: 20px; font-weight: bold; color: #FF4B4B; text-align: right; }
+    .card-note { font-size: 14px; color: #666; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Everyday Moments")
-
-# --- 2. 建立連線 ---
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-# --- 3. 處理資料 ---
-try:
-    df = conn.read(worksheet="Expenses", ttl=0)
-    if df.empty:
-        df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
-    else:
-        df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
-        df["Date_dt"] = pd.to_datetime(df["Date"], errors="coerce")
-        df["Month"] = df["Date_dt"].dt.strftime("%Y-%m")
-except Exception:
-    st.warning("⚠️ 請檢查 Secrets 設定中的 Google Sheets 金鑰")
-    df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
-
-# --- 時間校正 (UTC+8) ---
+# --- 3. 核心計算：重要時刻 ---
+# 自動校正為台灣時間 (UTC+8)
 taiwan_now = datetime.utcnow() + timedelta(hours=8)
-taiwan_date = taiwan_now.date()
-current_month_str = taiwan_now.strftime("%Y-%m")
+today = taiwan_now.date()
+love_days = (today - date(2019, 6, 15)).days
+baby_days = (today - date(2025, 9, 12)).days
 
 # --- 4. 側邊欄：手動天氣與紀念日 ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
-    love_days = (taiwan_date - date(2019, 6, 15)).days
-    baby_days = (taiwan_date - date(2025, 9, 12)).days
     st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
     st.success(f"👶 承淅來到地球 **{baby_days}** 天囉！")
     
     st.divider()
+    
     st.header("🌤️ 當地天氣")
     # 提供城市切換，完美避開 GPS 崩潰報錯
     location = st.selectbox("切換城市", ["台中西屯", "福岡 (日本)"])
@@ -69,63 +56,66 @@ with st.sidebar:
     try:
         w_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
         w_res = requests.get(w_url, timeout=5).json()
-        st.metric(f"{location} 氣溫", f"{w_res['current_weather']['temperature']} °C")
+        temp = w_res['current_weather']['temperature']
+        st.metric(f"{location} 氣溫", f"{temp} °C")
     except:
-        st.write("天氣讀取中...")
+        st.write("天氣更新中...")
 
     st.divider()
-    monthly_budget = st.number_input("本月錢包預算", value=30000, step=1000)
+    monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
 
-# --- 5. 🛡️ 錢包防禦戰 (主介面) ---
-current_spent = df[df["Month"] == current_month_str]["Amount"].sum() if not df.empty else 0
-remaining = monthly_budget - current_spent
-percent = min(current_spent / monthly_budget, 1.0) if monthly_budget > 0 else 0
+# --- 5. 主介面：錢包防禦戰 ---
+st.title("🛡️ 錢包防禦戰")
 
-st.subheader("🛡️ 錢包防禦戰")
-col_m1, col_m2 = st.columns([2, 1])
-with col_m1:
-    st.progress(percent)
-    st.caption(f"本月已支出比例: {percent:.1%}")
-with col_m2:
-    st.metric("剩餘預算", f"${remaining:,.0f}")
+# 建立 Google Sheets 連線
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    df = conn.read(worksheet="Expenses", ttl=0)
+    
+    # 預算進度條
+    current_spent = df[pd.to_datetime(df["Date"]).dt.strftime("%Y-%m") == today.strftime("%Y-%m")]["Amount"].sum() if not df.empty else 0
+    remaining = monthly_budget - current_spent
+    
+    col1, col2 = st.columns(2)
+    col1.metric("本月剩餘預算", f"${remaining:,.0f}")
+    col2.progress(min(current_spent/monthly_budget, 1.0) if monthly_budget > 0 else 0)
 
-st.write("---")
+except Exception:
+    st.warning("⚠️ 請在 Secrets 設定中檢查 Google Sheets 連線金鑰")
+    df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
 
-# --- 📂 分頁切換 ---
-tab1, tab2, tab3 = st.tabs(["📝 記帳", "📊 分析", "📋 列表"])
+# --- 6. 分頁功能 ---
+tab1, tab2 = st.tabs(["📝 快速記帳", "📋 消費清單"])
 
 with tab1:
     with st.form("entry_form", clear_on_submit=True):
-        d_val = st.date_input("📅 日期", taiwan_date)
-        c_val = st.selectbox("📂 分類", ["🍔 飲食", "🛒 日用", "🚗 交通", "🇯🇵 旅遊", "👶 子女", "💸 其他"])
-        a_val = st.number_input("💲 金額", min_value=0, step=1)
-        n_val = st.text_input("📝 備註")
+        date_v = st.date_input("日期", today)
+        cat_v = st.selectbox("分類", ["🍔 飲食", "🛒 日用", "👶 寶寶", "🚗 交通", "🇯🇵 旅遊", "💸 其他"])
+        amt_v = st.number_input("金額", min_value=0, step=1)
+        note_v = st.text_input("備註")
         
-        st.markdown('<div class="save-btn">', unsafe_allow_html=True)
         if st.form_submit_button("💾 儲存紀錄"):
-            if a_val > 0:
-                new_row = pd.DataFrame([{"Date": str(d_val), "Category": c_val, "Amount": a_val, "Note": n_val}])
-                conn.update(worksheet="Expenses", data=pd.concat([conn.read(worksheet="Expenses", ttl=0), new_row], ignore_index=True))
-                st.success("✅ 存入雲端成功！")
-                time.sleep(1)
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+            new_data = pd.DataFrame([{"Date": str(date_v), "Category": cat_v, "Amount": amt_v, "Note": note_v}])
+            updated_df = pd.concat([df, new_data], ignore_index=True)
+            conn.update(worksheet="Expenses", data=updated_df)
+            st.success("✅ 存入雲端成功！")
+            time.sleep(1)
+            st.rerun()
 
 with tab2:
-    if not df.empty and total_spent := df[df["Month"] == current_month_str]["Amount"].sum():
-        fig = px.pie(df[df["Month"] == current_month_str], values="Amount", names="Category", hole=0.4)
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("本月尚無數據可分析")
-
-with tab3:
-    st.subheader("📋 最近 15 筆紀錄")
+    st.subheader("📜 最近 15 筆紀錄")
     if not df.empty:
-        for _, row in df.sort_values("Date", ascending=False).head(15).iterrows():
-            with st.container(border=True):
-                col_c1, col_c2 = st.columns([3, 1])
-                with col_c1:
-                    st.markdown(f'<div class="card-title">{row["Category"]}</div>', unsafe_allow_html=True)
-                    st.caption(f"{row['Date']} | {row['Note']}")
-                with col_c2:
-                    st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
+        # 顯示卡片式清單
+        display_df = df.sort_values("Date", ascending=False).head(15)
+        for _, row in display_df.iterrows():
+            st.markdown(f"""
+            <div class="card-container">
+                <div style="display: flex; justify-content: space-between;">
+                    <span class="card-title">{row['Category']}</span>
+                    <span class="card-amount">${row['Amount']:,.0f}</span>
+                </div>
+                <div class="card-note">{row['Date']} | {row['Note']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("尚無消費紀錄")
