@@ -8,19 +8,19 @@ import time
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (修改點：加強輸入框底色) ---
+# --- CSS 美化 ---
 st.markdown("""
     <style>
     /* 輸入框本體設定：字體加大 + 淡黃色背景 */
     .stTextInput input, .stNumberInput input, .stDateInput input {
         font-size: 18px !important;
-        background-color: #fff9c4 !important; /* 淡黃色背景 */
+        background-color: #fff9c4 !important;
         color: #000000 !important;
     }
     
-    /* 下拉選單 (Selectbox) 特別設定 */
+    /* 下拉選單特別設定 */
     div[data-baseweb="select"] > div {
-        background-color: #fff9c4 !important; /* 淡黃色背景 */
+        background-color: #fff9c4 !important;
     }
     
     /* 按鈕設定 */
@@ -28,13 +28,17 @@ st.markdown("""
         width: 100%; height: 3.5em; font-size: 22px !important; font-weight: bold;
         border-radius: 10px; border: none; margin-top: 10px;
     }
-    /* 綠色確認按鈕 */
     .save-btn > button { background-color: #FF4B4B; color: white; }
     .save-btn > button:hover { background-color: #E03A3A; color: white; }
-    
-    /* 灰色刪除按鈕 */
     .del-btn > button { background-color: #6c757d; color: white; }
     .del-btn > button:hover { background-color: #5a6268; color: white; }
+    
+    /* 進度條文字美化 */
+    .game-status {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -56,9 +60,62 @@ try:
 except Exception:
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
 
-# --- 時間校正 (台灣時區 UTC+8) ---
+# --- 時間校正 ---
 taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
+current_month_str = taiwan_now.strftime("%Y-%m")
+
+# --- 🎮 遊戲化預算設定 (側邊欄) ---
+with st.sidebar:
+    st.header("⚙️ 遊戲設定 (預算)")
+    # 預設 30000，您可以自己調整
+    monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
+    st.info("💡 設定好預算，右邊會顯示您的「闖關進度」喔！")
+
+# --- 🎮 顯示錢包血量條 (核心功能) ---
+# 計算本月已花費金額
+if not df.empty:
+    current_month_df = df[df["Month"] == current_month_str]
+    current_spent = current_month_df["Amount"].sum()
+else:
+    current_spent = 0
+
+# 計算百分比
+if monthly_budget > 0:
+    percent = current_spent / monthly_budget
+else:
+    percent = 0
+
+# 顯示進度條邏輯
+st.write("---")
+st.subheader(f"🛡️ 本月錢包防禦戰 ({current_month_str})")
+
+col_bar1, col_bar2 = st.columns([3, 1])
+
+with col_bar1:
+    # 決定遊戲狀態與顏色
+    if percent < 0.5:
+        status_text = "🟢 勇者狀態良好，繼續冒險！"
+        bar_color = "green" # Streamlit progress 無法直接改色，但我們可以用文字標示
+    elif percent < 0.8:
+        status_text = "🟡 遭遇小怪，錢包受傷中..."
+    elif percent < 1.0:
+        status_text = "🔴 BOSS 戰預警！血量告急！"
+    else:
+        status_text = "☠️ GAME OVER... 錢包已陣亡 (超支)"
+
+    st.markdown(f'<div class="game-status">{status_text}</div>', unsafe_allow_html=True)
+    
+    # 進度條 (Streamlit 數值不能超過 1.0，所以要做限制)
+    display_percent = min(percent, 1.0)
+    st.progress(display_percent)
+
+with col_bar2:
+    # 顯示數字詳情
+    remaining = monthly_budget - current_spent
+    st.metric("剩餘血量", f"${remaining:,.0f}", delta=f"-${current_spent:,.0f} 已損血", delta_color="inverse")
+
+st.write("---")
 
 # --- 4. 記帳輸入區 ---
 with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
@@ -185,7 +242,7 @@ if not df.empty and len(df) > 0:
 
         total_spent = plot_df["Amount"].sum()
         with col_filter2:
-            st.metric("總支出", f"${total_spent:,.0f}")
+            st.metric("該月總支出", f"${total_spent:,.0f}")
 
         if total_spent > 0:
             pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
