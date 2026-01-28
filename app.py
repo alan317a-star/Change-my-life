@@ -9,7 +9,7 @@ import time
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (跳窗單行優化版) ---
+# --- CSS 美化 (跳窗單行 + 星星平衡版) ---
 st.markdown("""
     <style>
     /* 1. 輸入框設定 */
@@ -57,8 +57,8 @@ st.markdown("""
         top: 50% !important;
         left: 50% !important;
         transform: translate(-50%, -50%) !important;
-        width: 90vw !important; /* 稍微加寬，確保一行字塞得下 */
-        max-width: 500px !important; /* 放寬最大限制 */
+        width: 95vw !important; /* 加寬到 95% 確保星星不換行 */
+        max-width: 500px !important;
         padding: 20px !important;
         border-radius: 15px !important;
         background-color: #ffffff !important;
@@ -71,13 +71,13 @@ st.markdown("""
     div[data-testid="stToast"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
-        font-size: 20px !important; /* 字體大小適中 */
+        font-size: 20px !important; 
         font-weight: bold !important;
         display: flex !important;
-        flex-direction: row !important; /* 改為橫向排列 */
+        flex-direction: row !important;
         align-items: center !important;
         justify-content: center !important;
-        white-space: nowrap !important; /* 強制不換行 */
+        white-space: nowrap !important; /* 強制單行 */
     }
     </style>
 """, unsafe_allow_html=True)
@@ -202,11 +202,10 @@ with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
                     """
                     components.html(vibration_script, height=0, width=0)
                     
-                    # 跳窗 (單行版)
-                    st.toast("🌟 記帳的開始，就是成功的開始！", icon="✨")
-                    st.success(f"✅ 已記錄：${amount_val}\n\n✨ 記帳的開始，就是成功的開始！")
+                    # --- 修改點：前後呼應的星星 + 單行 ---
+                    st.toast("🌟 記帳的開始，就是成功的開始！ 🌟", icon="✨")
+                    st.success(f"✅ 已記錄：${amount_val}\n\n🌟 記帳的開始，就是成功的開始！ 🌟")
                     
-                    # --- 修改點：這裡改為 1.5 秒 ---
                     time.sleep(1.5)
                     st.rerun()
                 except Exception as e:
