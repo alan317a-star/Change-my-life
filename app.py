@@ -48,9 +48,10 @@ except Exception as e:
 # 加入一個按鈕直接跳轉去記帳
 st.markdown("---")
 st.markdown("""
-    <a href="您的_Google_表單_網址" target="_blank">
+    <a href="https://docs.google.com/spreadsheets/d/10bzPEsIqRdnjTiI9sr6wN9DVTpI7HbikYTNz1UzQ21A/edit?usp=sharing" target="_blank">
         <button style="width:100%; padding: 15px; background-color: #FF4B4B; color: white; border: none; border-radius: 10px; font-size: 18px;">
             ➕ 按這裡記帳 (開啟 Google 表單)
         </button>
     </a>
     """, unsafe_allow_html=True)
+
