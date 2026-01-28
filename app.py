@@ -13,82 +13,16 @@ st.set_page_config(page_title="Everyday Moments", layout="centered")
 # --- CSS 美化 ---
 st.markdown("""
     <style>
-    /* 輸入框與文字設定 (iPhone 黑字優化) */
     .stTextInput input, .stNumberInput input, .stDateInput input {
         font-size: 18px !important;
         background-color: #fff9c4 !important;
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-        caret-color: #000000 !important;
     }
-    
-    div[data-baseweb="select"] > div {
-        background-color: #fff9c4 !important;
-        color: #000000 !important;
-    }
-    div[data-baseweb="select"] span {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
-    div[data-baseweb="select"] svg {
-        fill: #000000 !important;
-    }
-    
-    /* 按鈕設定 */
     div.stButton > button {
         width: 100%; height: 3.5em; font-size: 22px !important; font-weight: bold;
-        border-radius: 10px; border: none; margin-top: 10px;
+        border-radius: 10px; margin-top: 10px;
     }
     .save-btn > button { background-color: #FF4B4B; color: white; }
-    .save-btn > button:hover { background-color: #E03A3A; color: white; }
-    .del-btn > button { background-color: #6c757d; color: white; }
-    .del-btn > button:hover { background-color: #5a6268; color: white; }
-    
-    /* 進度條文字 */
-    .game-status {
-        font-size: 20px;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-
-    /* 跳窗設定 */
-    div[data-testid="stToast"] {
-        position: fixed !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        width: 90vw !important;
-        max-width: 500px !important;
-        padding: 15px 25px !important;
-        border-radius: 50px !important;
-        background-color: #ffffff !important;
-        box-shadow: 0 4px 30px rgba(0,0,0,0.3) !important;
-        text-align: center !important;
-        z-index: 999999 !important;
-        border: 2px solid #FF4B4B !important;
-    }
-    
-    div[data-testid="stToast"] * {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-        font-size: 20px !important;
-        font-weight: bold !important;
-        font-family: sans-serif !important;
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: center !important;
-        white-space: nowrap !important;
-    }
-    
-    /* 分頁籤 (Tabs) 字體放大 */
-    button[data-baseweb="tab"] div p {
-        font-size: 20px !important;
-        font-weight: bold !important;
-    }
-    
-    /* 卡片式列表樣式 */
-    .card-title { font-size: 18px; font-weight: bold; color: #333; }
     .card-amount { font-size: 20px; font-weight: bold; color: #FF4B4B; text-align: right; }
     </style>
 """, unsafe_allow_html=True)
@@ -119,48 +53,33 @@ current_month_str = taiwan_now.strftime("%Y-%m")
 # --- ⏳ 側邊欄 ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
-    love_start = date(2019, 6, 15)
-    love_days = (taiwan_date - love_start).days
-    if love_days > 0:
-        st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
+    love_days = (taiwan_date - date(2019, 6, 15)).days
+    if love_days > 0: st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
     
-    baby_born = date(2025, 9, 12)
-    baby_days = (taiwan_date - baby_born).days
-    if baby_days > 0:
-        st.success(f"👶 承淅來到地球 **{baby_days}** 天囉！")
-    elif baby_days == 0:
-        st.success("🎂 就是今天！寶寶誕生啦！")
-    else:
-        st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
+    baby_days = (taiwan_date - date(2025, 9, 12)).days
+    if baby_days > 0: st.success(f"👶 承淅來到地球 **{baby_days}** 天囉！")
+    elif baby_days == 0: st.success("🎂 就是今天！寶寶誕生啦！")
+    else: st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
 
     st.write("---")
     st.header("⚙️ 遊戲設定")
-    monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
+    monthly_budget = st.number_input("本月總預算", value=30000, step=1000)
 
 # --- 🛡️ 錢包防禦戰 ---
-if not df.empty:
-    current_month_df = df[df["Month"] == current_month_str]
-    current_spent = current_month_df["Amount"].sum()
-else:
-    current_spent = 0
-
+current_spent = df[df["Month"] == current_month_str]["Amount"].sum() if not df.empty else 0
 percent = (current_spent / monthly_budget) if monthly_budget > 0 else 0
 
 st.subheader(f"🛡️ 錢包防禦戰")
-_, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
-days_left = last_day - taiwan_date.day + 1
-rem_budget = monthly_budget - current_spent
-daily_budget = rem_budget / days_left if days_left > 0 else 0
-
 col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
-    status = "🟢 勇者狀態良好！" if percent < 0.5 else "🟡 受傷中..." if percent < 0.8 else "🔴 告急！" if percent < 1.0 else "☠️ 陣亡"
-    st.markdown(f'<div class="game-status">{status}</div>', unsafe_allow_html=True)
+    status = "🟢 狀態良好" if percent < 0.5 else "🟡 注意赤字" if percent < 0.8 else "🔴 警告"
+    st.markdown(f"**{status}**")
     st.progress(min(percent, 1.0))
-with col2:
-    st.metric("剩餘血量", f"${rem_budget:,.0f}")
-with col3:
-    st.metric("今日可用", f"${daily_budget:,.0f}")
+with col2: st.metric("剩餘預算", f"${(monthly_budget - current_spent):,.0f}")
+with col3: 
+    _, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
+    days_left = last_day - taiwan_date.day + 1
+    st.metric("今日可用", f"${((monthly_budget - current_spent) / days_left):,.0f}" if days_left > 0 else "$0")
 
 st.write("---")
 
@@ -169,39 +88,47 @@ tab1, tab2, tab3 = st.tabs(["📝 記帳", "📊 分析", "📋 列表"])
 
 # === 分頁 1: 記帳 ===
 with tab1:
-    st.markdown("### 😈 小壞蛋，錢要花的值得！")
     with st.form("entry_form", clear_on_submit=True):
         f_col1, f_col2 = st.columns(2)
         with f_col1:
             d_val = st.date_input("📅 日期", taiwan_date)
         with f_col2:
-            c_val = st.selectbox("📂 分類", ["🍔 飲食", "🛒 日用", "🚗 交通", "🏠 居家", "👗 服飾", "💆‍♂️ 醫療", "🎮 娛樂", "📚 教育", "💼 保險", "👶 子女", "💸 其他"])
+            # 這裡更新為大眾常用的記帳分類
+            c_val = st.selectbox("📂 分類", [
+                "🍱 飲食 (早午餐/晚餐/飲料)",
+                "🏠 住房 (日常用品/水電)",
+                "🚗 交通 (車票/加油)",
+                "🎉 娛樂 (電影/旅遊/聚會)",
+                "🛒 購物 (衣服/鞋包/配件)",
+                "💊 醫療 (看診/藥品)",
+                "📱 通訊 (手機費/訂閱)",
+                "👶 寶寶 (尿布/奶粉/玩具)",
+                "🎁 社交 (紅包/禮物)",
+                "🎯 其他 (稅金/教育/保險)"
+            ])
             
         a_val = st.number_input("💲 金額", min_value=0, step=10)
-        n_val = st.text_input("📝 備註")
+        n_val = st.text_input("📝 備註 (例如：麥當勞、買尿布)")
         
         st.markdown('<div class="save-btn">', unsafe_allow_html=True)
-        if st.form_submit_button("💾 確認儲存"):
+        if st.form_submit_button("💾 儲存紀錄"):
             if a_val > 0:
                 ts = f"{d_val} {taiwan_now.strftime('%H:%M:%S')}"
                 new_row = pd.DataFrame([{"Date": ts, "Category": c_val, "Amount": a_val, "Note": n_val}])
-                raw = conn.read(worksheet="Expenses", ttl=0)
-                updated = pd.concat([raw, new_row], ignore_index=True)
+                updated = pd.concat([conn.read(worksheet="Expenses", ttl=0), new_row], ignore_index=True)
                 conn.update(worksheet="Expenses", data=updated)
-                st.toast("記帳成功！")
+                st.toast("記好囉！辛苦了 ✨")
                 time.sleep(1)
                 st.rerun()
-            else:
-                st.warning("請輸入金額")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # === 分頁 2: 分析 ===
 with tab2:
     if not df.empty:
-        mon = st.selectbox("🗓️ 月份", ["全部"] + sorted(df["Month"].unique().tolist(), reverse=True))
+        mon = st.selectbox("🗓️ 選擇月份", ["全部"] + sorted(df["Month"].unique().tolist(), reverse=True))
         pdf = df if mon == "全部" else df[df["Month"] == mon]
-        st.metric("總支出", f"${pdf['Amount'].sum():,.0f}")
-        fig = px.pie(pdf, values="Amount", names="Category", hole=0.4)
+        st.metric("總累計支出", f"${pdf['Amount'].sum():,.0f}")
+        fig = px.pie(pdf, values="Amount", names="Category", hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
         st.plotly_chart(fig, use_container_width=True)
 
 # === 分頁 3: 列表 ===
@@ -213,12 +140,10 @@ with tab3:
                 cl1.markdown(f"**{row['Category']}** \n<small>{row['Date']} | {row['Note']}</small>", unsafe_allow_html=True)
                 cl2.markdown(f"<div class='card-amount'>${row['Amount']:,.0f}</div>", unsafe_allow_html=True)
 
-# 刪除功能
-with st.sidebar.expander("🗑️ 刪除紀錄"):
-    if not df.empty:
-        target = st.selectbox("選擇刪除項", ["請選擇"] + [f"{i}: {r['Date']} - {r['Amount']}" for i, r in df.iterrows()])
-        if st.button("確認刪除") and target != "請選擇":
-            idx = int(target.split(":")[0])
-            raw = conn.read(worksheet="Expenses", ttl=0)
-            conn.update(worksheet="Expenses", data=raw.drop(idx))
+# 刪除功能 (放在側邊欄下方)
+with st.sidebar.expander("🗑️ 刪除最後一筆紀錄"):
+    if st.button("確認撤銷最後一筆"):
+        raw = conn.read(worksheet="Expenses", ttl=0)
+        if not raw.empty:
+            conn.update(worksheet="Expenses", data=raw.iloc[:-1])
             st.rerun()
