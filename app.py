@@ -1,5 +1,6 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
+import streamlit.components.v1 as components # 引入元件庫，為了做震動效果
 import pandas as pd
 import plotly.express as px
 from datetime import date, datetime, timedelta
@@ -8,19 +9,19 @@ import time
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (iPhone 深色模式友善版) ---
+# --- CSS 美化 (含 iPhone 黑字 + 跳窗置中放大) ---
 st.markdown("""
     <style>
-    /* 輸入框本體設定：淡黃色背景 + 強制黑字 */
+    /* 1. 輸入框本體設定：淡黃色背景 + 強制黑字 */
     .stTextInput input, .stNumberInput input, .stDateInput input {
         font-size: 18px !important;
         background-color: #fff9c4 !important;
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; /* 強制 iPhone 顯示黑字 */
+        -webkit-text-fill-color: #000000 !important;
         caret-color: #000000 !important;
     }
     
-    /* 下拉選單特別設定 */
+    /* 2. 下拉選單設定 */
     div[data-baseweb="select"] > div {
         background-color: #fff9c4 !important;
         color: #000000 !important;
@@ -33,7 +34,7 @@ st.markdown("""
         fill: #000000 !important;
     }
     
-    /* 按鈕設定 */
+    /* 3. 按鈕設定 */
     div.stButton > button {
         width: 100%; height: 3.5em; font-size: 22px !important; font-weight: bold;
         border-radius: 10px; border: none; margin-top: 10px;
@@ -43,11 +44,37 @@ st.markdown("""
     .del-btn > button { background-color: #6c757d; color: white; }
     .del-btn > button:hover { background-color: #5a6268; color: white; }
     
-    /* 進度條文字美化 */
+    /* 4. 進度條文字美化 */
     .game-status {
         font-size: 20px;
         font-weight: bold;
         margin-bottom: 5px;
+    }
+
+    /* 5. 【關鍵修改】Toast 跳窗置中放大術 */
+    div[data-testid="stToast"] {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 80vw !important; /* 寬度佔螢幕 80% */
+        max-width: 400px !important;
+        padding: 30px !important;
+        border-radius: 20px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3) !important;
+        text-align: center !important;
+        font-size: 24px !important; /* 字體放大 */
+        z-index: 999999 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    /* 調整 Toast 裡面的圖示和文字 */
+    div[data-testid="stToast"] > div {
+        font-size: 22px !important;
+        font-weight: bold !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -164,11 +191,26 @@ with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     conn.update(worksheet="Expenses", data=updated_df)
                     
-                    # --- 修改點：更換為新的金句 ---
-                    st.toast("🌱 記帳的開始，就是成功的開始！", icon="🌟")
+                    # 1. 觸發震動 (使用 JS)
+                    # 嘗試震動 200毫秒 (注意：iPhone 需要在 Safari 設定開啟相關權限，Android 較容易支援)
+                    vibration_script = """
+                    <script>
+                    try {
+                        window.navigator.vibrate(200);
+                    } catch(e) {
+                        console.log("Vibration not supported");
+                    }
+                    </script>
+                    """
+                    components.html(vibration_script, height=0, width=0)
+                    
+                    # 2. 顯示置中放大的跳窗
+                    st.toast("🌟 記帳的開始，就是成功的開始！", icon="✨")
+                    
                     st.success(f"✅ 已記錄：${amount_val}\n\n✨ 記帳的開始，就是成功的開始！")
                     
-                    time.sleep(1.5)
+                    # 3. 延長停留時間 (3.5 秒)
+                    time.sleep(3.5)
                     st.rerun()
                 except Exception as e:
                     st.error(f"寫入失敗：{e}")
@@ -187,8 +229,12 @@ if not df.empty:
                 if not raw_df.empty:
                     updated_df = raw_df.iloc[:-1]
                     conn.update(worksheet="Expenses", data=updated_df)
-                    st.toast("✅ 已復原 (刪除最後一筆)", icon="↩️")
-                    time.sleep(1)
+                    
+                    # 震動 + 跳窗
+                    components.html("<script>window.navigator.vibrate(100);</script>", height=0, width=0)
+                    st.toast("↩️ 已復原 (刪除成功)", icon="✅")
+                    
+                    time.sleep(1.5)
                     st.rerun()
                 else:
                     st.info("已經沒有資料可以刪除了")
@@ -213,8 +259,10 @@ if not df.empty:
                     raw_df = conn.read(worksheet="Expenses", ttl=0)
                     updated_df = raw_df.drop(index_to_drop)
                     conn.update(worksheet="Expenses", data=updated_df)
+                    
+                    components.html("<script>window.navigator.vibrate(100);</script>", height=0, width=0)
                     st.success(f"✅ 已刪除紀錄：{selected_item}")
-                    time.sleep(1)
+                    time.sleep(1.5)
                     st.rerun()
                 except Exception as e:
                     st.error(f"刪除失敗: {e}")
@@ -254,4 +302,9 @@ if not df.empty and len(df) > 0:
 else:
     st.info("尚無資料")
 
-#
+# --- 7. 詳細列表 ---
+st.write("---")
+with st.expander("📋 查看詳細紀錄列表", expanded=True):
+    if not df.empty:
+        display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
