@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import plotly.express as px
-from datetime import date
+from datetime import date, datetime # 引入 datetime 以抓取精確時間
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="家庭與旅遊帳本", layout="centered")
@@ -21,7 +21,7 @@ st.markdown("""
 
 st.title("💰 家庭與旅遊帳本")
 
-# --- 2. 建立連線 (使用 Secrets) ---
+# --- 2. 建立連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- 3. 讀取與處理資料 ---
@@ -30,19 +30,22 @@ try:
     if df.empty:
         df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     else:
-        # 資料轉型：金額轉數字，日期轉時間格式
+        # 資料轉型
         df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
-        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-        df["Month"] = df["Date"].dt.strftime("%Y-%m") # 增加月份欄位
+        # 這裡 Date 維持字串或轉 datetime 都可以，為了顯示秒數，我們後續在顯示時處理
+        df["Date_dt"] = pd.to_datetime(df["Date"], errors="coerce") 
+        df["Month"] = df["Date_dt"].dt.strftime("%Y-%m")
         df["Note"] = df["Note"].fillna("")
 except Exception:
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
 
-# --- 4. 記帳輸入區 (摺疊選單) ---
-with st.expander("📝 新增一筆支出", expanded=False):
+# --- 4. 記帳輸入區 (修改點：預設展開 expanded=True) ---
+# 這裡改成 True，手機一打開就是輸入框
+with st.expander("📝 新增一筆支出", expanded=True): 
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
+            # 這裡依然讓您選日期，方便補記昨天的帳
             date_val = st.date_input("📅 日期", date.today())
         with col2:
             cat_val = st.selectbox("📂 分類", [
@@ -58,78 +61,69 @@ with st.expander("📝 新增一筆支出", expanded=False):
         if submitted:
             if amount_val > 0:
                 try:
-                    # 準備新資料 (轉回字串寫入比較安全)
+                    # (修改點：加入精確時間)
+                    # 邏輯：使用「您選擇的日期」+「當下送出時的時間」
+                    current_time = datetime.now().time()
+                    # 組合出 2024-02-01 14:30:05 這樣的格式
+                    full_timestamp = datetime.combine(date_val, current_time).strftime("%Y-%m-%d %H:%M:%S")
+
                     new_data = pd.DataFrame([{
-                        "Date": str(date_val), 
+                        "Date": full_timestamp, # 存入完整的年月日時分秒
                         "Category": cat_val, 
                         "Amount": amount_val, 
                         "Note": note_val
                     }])
                     
-                    # 重新讀取並合併
+                    # 寫入流程
                     raw_df = conn.read(worksheet="Expenses", ttl=0)
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
-                    
-                    # 寫入 Google 表格
                     conn.update(worksheet="Expenses", data=updated_df)
-                    st.success(f"✅ 已記錄：${amount_val}")
+                    
+                    st.success(f"✅ 已記錄：${amount_val} ({full_timestamp})")
                     st.rerun()
                 except Exception as e:
                     st.error(f"寫入失敗：{e}")
             else:
                 st.warning("⚠️ 金額不能為 0")
 
-# --- 5. 📊 圓餅圖分析區 ---
+# --- 5. 圓餅圖分析區 ---
 st.write("---")
 st.subheader("📊 月份支出分析")
 
 if not df.empty and len(df) > 0:
-    # 找出所有月份
+    # 處理月份篩選
     available_months = sorted(df["Month"].dropna().unique(), reverse=True)
-    
-    col_filter1, col_filter2 = st.columns([1, 2])
-    with col_filter1:
-        # 月份篩選器
-        if len(available_months) > 0:
+    if len(available_months) > 0:
+        col_filter1, col_filter2 = st.columns([1, 2])
+        with col_filter1:
             selected_month = st.selectbox("🗓️ 選擇月份", ["全部"] + list(available_months))
+        
+        if selected_month == "全部":
+            plot_df = df
+            chart_title = "📅 所有時間的支出比例"
         else:
-            selected_month = "全部"
-            
-    # 篩選資料
-    if selected_month == "全部":
-        plot_df = df
-        chart_title = "📅 所有時間的支出比例"
-    else:
-        plot_df = df[df["Month"] == selected_month]
-        chart_title = f"📅 {selected_month} 支出比例"
+            plot_df = df[df["Month"] == selected_month]
+            chart_title = f"📅 {selected_month} 支出比例"
 
-    # 計算總額
-    total_spent = plot_df["Amount"].sum()
-    
-    with col_filter2:
-        st.metric("總支出", f"${total_spent:,.0f}")
+        total_spent = plot_df["Amount"].sum()
+        with col_filter2:
+            st.metric("總支出", f"${total_spent:,.0f}")
 
-    if total_spent > 0:
-        # 繪製圓餅圖
-        pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
-        fig = px.pie(
-            pie_data, 
-            values="Amount", 
-            names="Category", 
-            title=chart_title,
-            hole=0.4
-        )
-        fig.update_traces(textposition='inside', textinfo='percent+label')
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("查無此月份資料")
+        if total_spent > 0:
+            pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
+            fig = px.pie(pie_data, values="Amount", names="Category", title=chart_title, hole=0.4)
+            fig.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("查無此月份資料")
 else:
-    st.info("目前還沒有資料，快記下第一筆吧！")
+    st.info("尚無資料")
 
-# --- 6. 詳細列表 ---
+# --- 6. 詳細列表 (修改點：顯示幾點幾分幾秒) ---
 st.write("---")
 with st.expander("📋 查看詳細紀錄列表", expanded=True):
     if not df.empty:
-        # 顯示前整理一下欄位
+        # 為了確保顯示出秒數，我們將 Date 欄位強制轉成字串顯示
+        # 這樣 Streamlit 就不會自動把它縮減成只有日期
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
         st.dataframe(display_df, use_container_width=True, hide_index=True)
