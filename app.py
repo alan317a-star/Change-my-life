@@ -9,10 +9,10 @@ import time
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (修復跳窗白字問題) ---
+# --- CSS 美化 (iPhone 黑字 + 置中跳窗) ---
 st.markdown("""
     <style>
-    /* 1. 輸入框設定：淡黃色背景 + 強制黑字 */
+    /* 1. 輸入框設定 */
     .stTextInput input, .stNumberInput input, .stDateInput input {
         font-size: 18px !important;
         background-color: #fff9c4 !important;
@@ -51,7 +51,7 @@ st.markdown("""
         margin-bottom: 5px;
     }
 
-    /* 5. 【關鍵修復】Toast 跳窗置中 + 強制黑字 */
+    /* 5. Toast 跳窗置中 + 強制黑字 */
     div[data-testid="stToast"] {
         position: fixed !important;
         top: 50% !important;
@@ -61,14 +61,13 @@ st.markdown("""
         max-width: 400px !important;
         padding: 20px !important;
         border-radius: 15px !important;
-        background-color: #ffffff !important; /* 白底 */
+        background-color: #ffffff !important;
         box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
         text-align: center !important;
         z-index: 999999 !important;
-        border: 2px solid #FF4B4B !important; /* 加個紅框更明顯 */
+        border: 2px solid #FF4B4B !important;
     }
     
-    /* 強制跳窗內的所有元素 (圖示、文字) 都是黑色 */
     div[data-testid="stToast"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
@@ -194,7 +193,7 @@ with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     conn.update(worksheet="Expenses", data=updated_df)
                     
-                    # 1. 嘗試震動 (Android 比較有效，iPhone 通常會擋)
+                    # 震動嘗試
                     vibration_script = """
                     <script>
                     try { window.navigator.vibrate([100, 50, 100]); } catch(e) { console.log(e); }
@@ -202,12 +201,12 @@ with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
                     """
                     components.html(vibration_script, height=0, width=0)
                     
-                    # 2. 顯示置中跳窗 (已修復文字顏色)
+                    # 跳窗
                     st.toast("🌟 記帳的開始，\n就是成功的開始！", icon="✨")
-                    
                     st.success(f"✅ 已記錄：${amount_val}\n\n✨ 記帳的開始，就是成功的開始！")
                     
-                    time.sleep(3.5)
+                    # --- 修改點：這裡改為 2 秒 ---
+                    time.sleep(2)
                     st.rerun()
                 except Exception as e:
                     st.error(f"寫入失敗：{e}")
