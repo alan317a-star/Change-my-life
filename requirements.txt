@@ -1,3 +1,2 @@
 streamlit-gsheets
-plotly
 streamlit-js-eval
