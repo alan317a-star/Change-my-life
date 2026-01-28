@@ -8,8 +8,7 @@ import calendar
 import time
 import requests
 
-# --- 關鍵修改：引入 GPS 套件 ---
-# 如果您看到錯誤，請在終端機輸入：pip install streamlit-js-eval
+# --- GPS 套件 ---
 try:
     from streamlit_js_eval import get_geolocation
 except ImportError:
@@ -18,7 +17,7 @@ except ImportError:
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 ---
+# --- CSS 美化 (含卡片優化) ---
 st.markdown("""
     <style>
     /* 輸入框與文字設定 (iPhone 黑字優化) */
@@ -59,7 +58,7 @@ st.markdown("""
         margin-bottom: 5px;
     }
 
-    /* 跳窗設定 (單行文字) */
+    /* 跳窗設定 */
     div[data-testid="stToast"] {
         position: fixed !important;
         top: 50% !important;
@@ -94,6 +93,23 @@ st.markdown("""
         font-size: 20px !important;
         font-weight: bold !important;
     }
+    
+    /* 卡片式列表樣式 (讓文字更清楚) */
+    .card-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+    }
+    .card-note {
+        font-size: 14px;
+        color: #666;
+    }
+    .card-amount {
+        font-size: 20px;
+        font-weight: bold;
+        color: #FF4B4B;
+        text-align: right;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -111,6 +127,7 @@ try:
         df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
         df["Date_dt"] = pd.to_datetime(df["Date"], errors="coerce")
         df["Month"] = df["Date_dt"].dt.strftime("%Y-%m")
+        df["Date_Only"] = df["Date_dt"].dt.date
         df["Note"] = df["Note"].fillna("")
 except Exception:
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
@@ -141,12 +158,9 @@ def get_weather(lat, lon):
     except:
         return None
 
-# --- ⏳ 側邊欄：GPS + 重要時刻 ---
+# --- ⏳ 側邊欄 ---
 with st.sidebar:
     st.header("📍 目前位置")
-    
-    # === 關鍵修改：GPS 定位 ===
-    # 第一次執行時，瀏覽器會跳出「是否允許存取位置」，請點選「允許」
     try:
         loc = get_geolocation()
     except:
@@ -159,36 +173,27 @@ with st.sidebar:
         lat = loc['coords']['latitude']
         lon = loc['coords']['longitude']
         location_name = "📍 您的位置"
-        
-        # 取得天氣
         w_data = get_weather(lat, lon)
         if w_data:
             weather_text = w_data
     else:
-        # 如果還沒按允許，或定位失敗，預設顯示台中
         weather_text = "⏳ 等待 GPS..."
-        # 預設台中北區座標，避免空白
         default_weather = get_weather(24.16, 120.68)
         if default_weather:
-             # 如果真的抓不到，就先顯示台中，但標註是預設
              pass
 
     st.metric(location_name, weather_text)
     if not loc:
-        st.caption("請在瀏覽器左上角點選「允許」位置存取，即可顯示當地氣溫。")
+        st.caption("請在瀏覽器左上角點選「允許」位置存取。")
     
     st.write("---")
     
-    # 2. 重要時刻
     st.header("⏳ 重要時刻")
-    
-    # 在一起 (2019/06/15)
     love_start = date(2019, 6, 15)
     love_days = (taiwan_date - love_start).days
     if love_days > 0:
         st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
     
-    # 寶寶出生 (114/09/12 -> 2025/09/12)
     baby_born = date(2025, 9, 12)
     baby_days = (taiwan_date - baby_born).days
     if baby_days > 0:
@@ -199,10 +204,19 @@ with st.sidebar:
         st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
 
     st.write("---")
+    
+    st.header("🇯🇵 匯率換算")
+    jpy_rate = st.number_input("目前匯率 (JPY -> TWD)", value=0.22, step=0.001, format="%.3f")
+    jpy_amount = st.number_input("輸入日幣 (¥)", value=0, step=100)
+    if jpy_amount > 0:
+        twd_amount = jpy_amount * jpy_rate
+        st.write(f"≈ 台幣 **${twd_amount:,.0f}**")
+        
+    st.write("---")
     st.header("⚙️ 遊戲設定 (預算)")
     monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
 
-# --- 🛡️ 錢包血量條 (3欄) ---
+# --- 🛡️ 錢包血量條 ---
 if not df.empty:
     current_month_df = df[df["Month"] == current_month_str]
     current_spent = current_month_df["Amount"].sum()
@@ -247,7 +261,7 @@ st.write("---")
 # --- 📂 分頁切換 ---
 tab1, tab2, tab3 = st.tabs(["📝 記帳", "📊 分析", "📋 列表"])
 
-# === 分頁 1: 記帳輸入 + 摺疊刪除區 ===
+# === 分頁 1: 記帳 ===
 with tab1:
     st.markdown("### 😈 小壞蛋，錢要花的值得！")
     with st.form("entry_form", clear_on_submit=True):
@@ -308,9 +322,7 @@ with tab1:
     
     st.write("---")
     
-    # --- 記錯帳管理區 ---
     with st.expander("記錯帳按這邊", expanded=False):
-        # 1. 快速復原 (Undo)
         st.caption("👇 剛剛記錯了嗎？這裡可以快速復原上一筆")
         st.markdown('<div class="del-btn">', unsafe_allow_html=True)
         if st.button("↩️ 刪除剛記的那一筆 (Undo)"):
@@ -328,7 +340,6 @@ with tab1:
                 st.error(f"刪除失敗: {e}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # 2. 指定刪除 (下拉選單)
         if not df.empty:
             st.markdown("---")
             st.caption("或是選擇刪除特定的一筆：")
@@ -350,46 +361,84 @@ with tab1:
                         st.error(f"刪除失敗: {e}")
 
 
-# === 分頁 2: 圓餅圖分析 ===
+# === 分頁 2: 分析 ===
 with tab2:
-    st.subheader("📊 月份支出分析")
     if not df.empty and len(df) > 0:
         available_months = sorted(df["Month"].dropna().unique(), reverse=True)
-        if len(available_months) > 0:
-            col_filter1, col_filter2 = st.columns([1, 2])
-            with col_filter1:
-                selected_month = st.selectbox("🗓️ 選擇月份", ["全部"] + list(available_months))
+        
+        col_filter1, col_filter2 = st.columns([1, 2])
+        with col_filter1:
+            selected_month = st.selectbox("🗓️ 選擇月份", ["全部"] + list(available_months))
+        
+        if selected_month == "全部":
+            plot_df = df
+            chart_title = "📅 所有時間的支出比例"
+        else:
+            plot_df = df[df["Month"] == selected_month]
+            chart_title = f"📅 {selected_month} 支出比例"
+
+        total_spent = plot_df["Amount"].sum()
+        with col_filter2:
+            st.metric("該月總支出", f"${total_spent:,.0f}")
+
+        if total_spent > 0:
+            st.subheader("🥧 支出分類占比")
+            pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
             
-            if selected_month == "全部":
-                plot_df = df
-                chart_title = "📅 所有時間的支出比例"
-            else:
-                plot_df = df[df["Month"] == selected_month]
-                chart_title = f"📅 {selected_month} 支出比例"
-
-            total_spent = plot_df["Amount"].sum()
-            with col_filter2:
-                st.metric("該月總支出", f"${total_spent:,.0f}")
-
-            if total_spent > 0:
-                pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
-                fig = px.pie(pie_data, values="Amount", names="Category", title=chart_title, hole=0.4)
-                fig.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("查無此月份資料")
+            # 美編：設定溫馨的配色 (馬卡龍色系)
+            fig = px.pie(
+                pie_data, 
+                values="Amount", 
+                names="Category", 
+                title=chart_title, 
+                hole=0.4,
+                color_discrete_sequence=px.colors.qualitative.Pastel # 使用柔和配色
+            )
+            fig.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.write("---")
+            st.subheader("📈 每日支出走勢")
+            if "Date_Only" in plot_df.columns:
+                 daily_trend = plot_df.groupby("Date_Only")["Amount"].sum().reset_index()
+                 # 美編：柱狀圖也用柔和顏色
+                 fig_trend = px.bar(
+                     daily_trend, 
+                     x="Date_Only", 
+                     y="Amount", 
+                     title="每日花費金額", 
+                     text_auto=True,
+                     color_discrete_sequence=['#88c999'] # 柔和的綠色
+                 )
+                 fig_trend.update_xaxes(title="日期")
+                 fig_trend.update_yaxes(title="金額")
+                 st.plotly_chart(fig_trend, use_container_width=True)
+        else:
+            st.info("查無此月份資料")
     else:
         st.info("尚無資料")
 
-# === 分頁 3: 詳細列表 (純檢視) ===
+# === 分頁 3: 詳細列表 (美編升級：卡片式設計) ===
 with tab3:
     st.subheader("📋 詳細紀錄列表")
     
     if not df.empty:
-        # 1. 顯示資料 (原生表格)
+        # 準備資料
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-
-
-
+        
+        # 美編：不用 dataframe，改用卡片 (Container) 迴圈顯示
+        for index, row in display_df.head(20).iterrows(): # 為了效能，預設先顯示前20筆
+            with st.container(border=True): # 每一筆都是一個框框
+                c1, c2 = st.columns([3, 1]) # 左邊寬，右邊窄
+                
+                with c1:
+                    # 分類與日期
+                    st.markdown(f'<div class="card-title">{row["Category"]}</div>', unsafe_allow_html=True)
+                    st.caption(f"{row['Date']} | {row['Note']}")
+                
+                with c2:
+                    # 金額
+                    st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
+        
+        if len(display_df) > 20:
+            st.info("💡 僅顯示最近 20 筆，完整資料請至後台查看。")
