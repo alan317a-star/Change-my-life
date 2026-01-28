@@ -11,7 +11,7 @@ import requests
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (重點修正跳窗) ---
+# --- CSS 美化 ---
 st.markdown("""
     <style>
     /* 輸入框與文字設定 (iPhone 黑字優化) */
@@ -47,43 +47,30 @@ st.markdown("""
     /* 進度條文字 */
     .game-status { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
 
-    /* ✨ 跳窗 (Toast) 防裁切終極修正 ✨ */
+    /* ✨ 通知視窗 (Toast) 手機原生感優化 ✨ */
+    /* 這次我們不強制置中，改為頂部滿版橫幅，保證不切字 */
     div[data-testid="stToast"] {
-        width: 85vw !important; 
-        max-width: 500px !important;
+        width: 95vw !important;
+        max-width: 600px !important;
         background-color: #ffffff !important;
-        border: 3px solid #FF4B4B !important; /* 邊框加粗一點 */
-        border-radius: 20px !important;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.2) !important;
-        z-index: 999999 !important;
+        border-left: 10px solid #FF4B4B !important; /* 左側紅色醒目條 */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        border-radius: 8px !important;
         
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        
-        /* 關鍵：強制高度與行距，防止文字被切頭切尾 */
-        height: auto !important; 
-        min-height: 80px !important; /* 給予足夠的最小高度 */
-        padding: 20px 10px !important; /* 上下內距加大 */
+        /* 確保位置安全 */
+        opacity: 1 !important;
+        padding: 15px 20px !important;
+        margin: 10px auto !important;
     }
     
-    div[data-testid="stToast"] > div {
-        justify-content: center !important;
-        text-align: center !important;
-        width: 100% !important;
-        height: auto !important;
-        white-space: normal !important; /* 允許換行，防止因為太長被切掉 */
-    }
-    
+    /* 強制文字顯示完整 */
     div[data-testid="stToast"] p {
-        color: #000000 !important;
-        font-size: 20px !important; /* 字體大 */
-        font-weight: 900 !important; /* 特粗 */
-        line-height: 1.5 !important; /* 行高拉開，讓文字有呼吸空間 */
+        color: #333333 !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        line-height: 1.5 !important;
+        white-space: pre-wrap !important;
         margin: 0 !important;
-        padding: 0 !important;
-        text-align: center !important;
-        display: block !important;
     }
     
     /* 分頁籤 (Tabs) 字體放大 */
@@ -196,9 +183,12 @@ with tab1:
                     # 震動回饋
                     components.html("<script>window.navigator.vibrate([100,50,100]);</script>", height=0, width=0)
                     
-                    # 🌟 修正後的跳窗，確保文字完整顯示
-                    st.toast("開始記帳，就是成功的開始！")
-                    st.success(f"✅ 已記錄：${amount_val} — **開始記帳，就是成功的開始！**")
+                    # 🌟 採用最穩定的通知方式：頂部通知
+                    # \n 是換行符號，讓標語在第二行顯示
+                    st.toast("✅ 記帳成功！\n開始記帳，就是成功的開始！")
+                    
+                    # 畫面上的綠色區塊，雙重確認
+                    st.success(f"已存入：${amount_val} ｜ 開始記帳，就是成功的開始！")
                     
                     time.sleep(1.2)
                     st.rerun()
@@ -214,7 +204,7 @@ with tab1:
                 raw_df = conn.read(worksheet="Expenses", ttl=0)
                 if not raw_df.empty:
                     conn.update(worksheet="Expenses", data=raw_df.iloc[:-1])
-                    st.toast("已刪除最後一筆紀錄")
+                    st.toast("✅ 已刪除最後一筆紀錄")
                     time.sleep(1.2)
                     st.rerun()
             except Exception as e:
