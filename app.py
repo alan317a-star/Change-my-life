@@ -295,14 +295,19 @@ if not df.empty and len(df) > 0:
 else:
     st.info("尚無資料")
 
-# --- 7. 詳細列表 (修改點：只顯示前 5 筆) ---
+# --- 7. 詳細列表 (顯示全部 + 限制高度) ---
 st.write("---")
-with st.expander("📋 查看詳細紀錄列表 (最近 5 筆)", expanded=True):
+with st.expander("📋 查看詳細紀錄列表 (可捲動)", expanded=True):
     if not df.empty:
-        # 先排序
-        display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
-        # 只取前 5 筆 (head(5))
-        st.dataframe(display_df.head(5), use_container_width=True, hide_index=True)
+        # 1. 準備顯示資料 (排序)
+        full_sorted_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
         
-        # 顯示一個小提示
-        st.caption("👀 僅顯示最新的 5 筆資料，保持畫面簡潔。")
+        # 2. 顯示表格 (使用 height 參數來控制高度，達到簡潔效果)
+        # height=250 大約是 6 行的高度，超過可以捲動
+        st.dataframe(
+            full_sorted_df, 
+            use_container_width=True, 
+            hide_index=True,
+            height=250 
+        )
+        st.caption("💡 提示：表格可上下捲動查看更多。滑鼠移到表格右上角可下載完整 CSV。")
