@@ -123,7 +123,7 @@ with col_bar2:
 st.write("---")
 
 # --- 4. 記帳輸入區 ---
-with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
+with st.expander("😈 小壞蛋，要花的值得！😈", expanded=True):
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -133,11 +133,11 @@ with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
                 "🍔 飲食 (三餐/飲料)",
                 "🛒 日用 (超市/藥妝)",
                 "🚗 交通 (車票/加油)",
-                "🏠 居家 (房租/水電/網路)",
+                "🏠 居家 (房貸/水電)",
                 "👗 服飾 (衣物/鞋包)",
                 "💆‍♂️ 醫療 (看診/藥品)",
                 "🎮 娛樂 (電影/旅遊/遊戲)",
-                "📚 教育 (書籍/課程)",
+                "📚 教育 (書籍/課程/才藝)",
                 "💼 保險稅務",
                 "👶 子女 (尿布/學費)", 
                 "💸 其他"
@@ -263,3 +263,4 @@ with st.expander("📋 查看詳細紀錄列表", expanded=True):
     if not df.empty:
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
         st.dataframe(display_df, use_container_width=True, hide_index=True)
+
