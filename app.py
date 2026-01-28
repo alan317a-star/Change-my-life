@@ -8,10 +8,22 @@ import time
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 ---
+# --- CSS 美化 (修改點：加強輸入框底色) ---
 st.markdown("""
     <style>
-    .stTextInput input, .stNumberInput input, .stSelectbox, .stDateInput { font-size: 18px !important; }
+    /* 輸入框本體設定：字體加大 + 淡黃色背景 */
+    .stTextInput input, .stNumberInput input, .stDateInput input {
+        font-size: 18px !important;
+        background-color: #fff9c4 !important; /* 淡黃色背景 */
+        color: #000000 !important;
+    }
+    
+    /* 下拉選單 (Selectbox) 特別設定 */
+    div[data-baseweb="select"] > div {
+        background-color: #fff9c4 !important; /* 淡黃色背景 */
+    }
+    
+    /* 按鈕設定 */
     div.stButton > button {
         width: 100%; height: 3.5em; font-size: 22px !important; font-weight: bold;
         border-radius: 10px; border: none; margin-top: 10px;
@@ -49,7 +61,7 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 
 # --- 4. 記帳輸入區 ---
-with st.expander("😈 小壞蛋，錢要花的值得！", expanded=True):
+with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -70,8 +82,6 @@ with st.expander("😈 小壞蛋，錢要花的值得！", expanded=True):
             ])
             
         amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
-        
-        # --- 修改點：備註欄位提示改為 (詳細記錄謝謝) ---
         note_val = st.text_input("📝 備註 (詳細記錄謝謝)")
         
         # 按鈕樣式
@@ -96,7 +106,6 @@ with st.expander("😈 小壞蛋，錢要花的值得！", expanded=True):
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     conn.update(worksheet="Expenses", data=updated_df)
                     
-                    # 激勵人心的跳窗通知
                     st.toast("🌈 一切會更好，請繼續努力！", icon="💪")
                     st.success(f"✅ 已記錄：${amount_val}\n\n✨ 一切會更好，請繼續努力！")
                     
@@ -194,4 +203,3 @@ with st.expander("📋 查看詳細紀錄列表", expanded=True):
     if not df.empty:
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
         st.dataframe(display_df, use_container_width=True, hide_index=True)
-
