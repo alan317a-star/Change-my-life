@@ -8,7 +8,7 @@ import time
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (修改點：針對 iPhone 深色模式強制黑字) ---
+# --- CSS 美化 (iPhone 深色模式友善版) ---
 st.markdown("""
     <style>
     /* 輸入框本體設定：淡黃色背景 + 強制黑字 */
@@ -16,23 +16,19 @@ st.markdown("""
         font-size: 18px !important;
         background-color: #fff9c4 !important;
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; /* 關鍵：強制 iPhone 顯示黑字 */
-        caret-color: #000000 !important; /* 游標顏色 */
+        -webkit-text-fill-color: #000000 !important; /* 強制 iPhone 顯示黑字 */
+        caret-color: #000000 !important;
     }
     
-    /* 下拉選單 (Selectbox) 特別設定 */
+    /* 下拉選單特別設定 */
     div[data-baseweb="select"] > div {
         background-color: #fff9c4 !important;
         color: #000000 !important;
     }
-    
-    /* 確保下拉選單裡面的文字 (span) 也是黑色的 */
     div[data-baseweb="select"] span {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
-    
-    /* 下拉選單的箭頭圖示改成深色，不然會看不到 */
     div[data-baseweb="select"] svg {
         fill: #000000 !important;
     }
@@ -79,7 +75,7 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- 🎮 遊戲化預算設定 (側邊欄) ---
+# --- 🎮 遊戲化預算設定 ---
 with st.sidebar:
     st.header("⚙️ 遊戲設定 (預算)")
     monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
@@ -123,7 +119,7 @@ with col_bar2:
 st.write("---")
 
 # --- 4. 記帳輸入區 ---
-with st.expander("😈 小壞蛋，要花的值得！😈", expanded=True):
+with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -133,11 +129,11 @@ with st.expander("😈 小壞蛋，要花的值得！😈", expanded=True):
                 "🍔 飲食 (三餐/飲料)",
                 "🛒 日用 (超市/藥妝)",
                 "🚗 交通 (車票/加油)",
-                "🏠 居家 (房貸/水電)",
+                "🏠 居家 (房租/水電/網路)",
                 "👗 服飾 (衣物/鞋包)",
                 "💆‍♂️ 醫療 (看診/藥品)",
                 "🎮 娛樂 (電影/旅遊/遊戲)",
-                "📚 教育 (書籍/課程/才藝)",
+                "📚 教育 (書籍/課程)",
                 "💼 保險稅務",
                 "👶 子女 (尿布/學費)", 
                 "💸 其他"
@@ -168,8 +164,9 @@ with st.expander("😈 小壞蛋，要花的值得！😈", expanded=True):
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     conn.update(worksheet="Expenses", data=updated_df)
                     
-                    st.toast("🌈 一切會更好，請繼續努力！", icon="💪")
-                    st.success(f"✅ 已記錄：${amount_val}\n\n✨ 一切會更好，請繼續努力！")
+                    # --- 修改點：更換為新的金句 ---
+                    st.toast("🌱 記帳的開始，就是成功的開始！", icon="🌟")
+                    st.success(f"✅ 已記錄：${amount_val}\n\n✨ 記帳的開始，就是成功的開始！")
                     
                     time.sleep(1.5)
                     st.rerun()
@@ -257,10 +254,4 @@ if not df.empty and len(df) > 0:
 else:
     st.info("尚無資料")
 
-# --- 7. 詳細列表 ---
-st.write("---")
-with st.expander("📋 查看詳細紀錄列表", expanded=True):
-    if not df.empty:
-        display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
-
+#
