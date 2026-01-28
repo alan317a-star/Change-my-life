@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import plotly.express as px
 from datetime import date, datetime, timedelta
-import time # 引入時間套件，為了讓鼓勵訊息停留一下
+import time
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
@@ -70,7 +70,9 @@ with st.expander("😈 紅字小壞蛋，錢要花的值得！", expanded=True):
             ])
             
         amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
-        note_val = st.text_input("📝 備註 (選填)")
+        
+        # --- 修改點：備註欄位提示改為 (詳細記錄謝謝) ---
+        note_val = st.text_input("📝 備註 (詳細記錄謝謝)")
         
         # 按鈕樣式
         st.markdown('<div class="save-btn">', unsafe_allow_html=True)
@@ -94,11 +96,10 @@ with st.expander("😈 紅字小壞蛋，錢要花的值得！", expanded=True):
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     conn.update(worksheet="Expenses", data=updated_df)
                     
-                    # --- 修改點：這裡加入了激勵人心的跳窗通知 ---
+                    # 激勵人心的跳窗通知
                     st.toast("🌈 一切會更好，請繼續努力！", icon="💪")
                     st.success(f"✅ 已記錄：${amount_val}\n\n✨ 一切會更好，請繼續努力！")
                     
-                    # 暫停 1.5 秒，讓您有時間看到這句話
                     time.sleep(1.5)
                     st.rerun()
                 except Exception as e:
