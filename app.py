@@ -6,7 +6,7 @@ import plotly.express as px
 from datetime import date, datetime, timedelta
 import calendar
 import time
-import requests # 新增：為了抓取天氣資料
+import requests
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
@@ -113,22 +113,41 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- 🌤️ 天氣功能 (使用 Open-Meteo 免費 API) ---
-@st.cache_data(ttl=600) # 設定快取 600秒 (10分鐘)，避免頻繁呼叫 API
-def get_weather():
+# --- 📍 城市座標資料庫 (模擬 GPS) ---
+CITY_COORDS = {
+    "📍 台中市 (北區)": (24.16, 120.68),
+    "📍 台北市": (25.03, 121.56),
+    "📍 新北市": (25.01, 121.46),
+    "📍 桃園市": (24.99, 121.30),
+    "📍 新竹市": (24.81, 120.96),
+    "📍 苗栗縣": (24.56, 120.82),
+    "📍 彰化縣": (24.05, 120.51),
+    "📍 南投縣": (23.96, 120.97),
+    "📍 雲林縣": (23.70, 120.43),
+    "📍 嘉義市": (23.48, 120.44),
+    "📍 台南市": (22.99, 120.21),
+    "📍 高雄市": (22.62, 120.30),
+    "📍 屏東縣": (22.55, 120.54),
+    "📍 宜蘭縣": (24.70, 121.72),
+    "📍 花蓮縣": (23.98, 121.60),
+    "📍 台東縣": (22.76, 121.14),
+    "✈️ 日本福岡": (33.59, 130.40) # 為了您的旅行！
+}
+
+# --- 🌤️ 天氣功能 ---
+@st.cache_data(ttl=600)
+def get_weather(lat, lon):
     try:
-        # 台中北區座標 (Latitude: 24.16, Longitude: 120.68)
-        url = "https://api.open-meteo.com/v1/forecast?latitude=24.16&longitude=120.68&current_weather=true&timezone=Asia%2FTaipei"
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&timezone=Asia%2FTaipei"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             temp = data['current_weather']['temperature']
-            # 簡單的天氣代碼判斷 (WMO Weather interpretation codes)
             code = data['current_weather']['weathercode']
-            if code <= 3: icon = "🌤️" # 晴天/多雲
-            elif code <= 48: icon = "☁️" # 霧
-            elif code <= 67: icon = "🌧️" # 雨
-            elif code <= 99: icon = "⛈️" # 雷雨
+            if code <= 3: icon = "🌤️"
+            elif code <= 48: icon = "☁️"
+            elif code <= 67: icon = "🌧️"
+            elif code <= 99: icon = "⛈️"
             else: icon = "🌡️"
             return f"{icon} {temp}°C"
         else:
@@ -138,25 +157,36 @@ def get_weather():
 
 # --- ⏳ 側邊欄：天氣 + 重要時刻 + 設定 ---
 with st.sidebar:
-    # 1. 天氣顯示
-    current_weather = get_weather()
+    # 1. 位置選擇 (模擬 GPS)
+    st.header("📍 選擇您的位置")
+    selected_city = st.selectbox(
+        "切換城市 (即時更新天氣)", 
+        list(CITY_COORDS.keys()),
+        index=0 # 預設選第一個 (台中)
+    )
+    
+    # 取得選定城市的座標
+    lat, lon = CITY_COORDS[selected_city]
+    
+    # 顯示天氣
+    current_weather = get_weather(lat, lon)
     if current_weather:
-        st.metric("台中北區", current_weather)
+        st.metric(f"目前的 {selected_city[:3]} 天氣", current_weather)
     else:
-        st.metric("台中北區", "☁️ Loading...")
+        st.metric("天氣", "☁️ 讀取中...")
     
     st.write("---")
     
     # 2. 重要時刻
     st.header("⏳ 重要時刻")
     
-    # 在一起 (2019/06/15)
+    # 在一起
     love_start = date(2019, 6, 15)
     love_days = (taiwan_date - love_start).days
     if love_days > 0:
         st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
     
-    # 寶寶出生 (2025/09/12)
+    # 寶寶出生
     baby_born = date(2025, 9, 12)
     baby_days = (taiwan_date - baby_born).days
     if baby_days > 0:
@@ -167,12 +197,10 @@ with st.sidebar:
         st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
 
     st.write("---")
-    
-    # 3. 預算設定
     st.header("⚙️ 遊戲設定 (預算)")
     monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
 
-# --- 🛡️ 錢包血量條 (置頂顯示 - 3 欄) ---
+# --- 🛡️ 錢包血量條 (3欄) ---
 if not df.empty:
     current_month_df = df[df["Month"] == current_month_str]
     current_spent = current_month_df["Amount"].sum()
@@ -186,7 +214,6 @@ else:
 
 st.subheader(f"🛡️ 本月錢包防禦戰")
 
-# 計算「今日可用」
 _, last_day_of_month = calendar.monthrange(taiwan_date.year, taiwan_date.month)
 days_remaining_in_month = last_day_of_month - taiwan_date.day + 1
 remaining_budget = monthly_budget - current_spent
