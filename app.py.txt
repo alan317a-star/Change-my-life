@@ -3,47 +3,34 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import date
 
-st.set_page_config(page_title="個人小助手", layout="centered")
+st.set_page_config(page_title="簡易記帳測試")
 
-# 建立 Google Sheets 連線
+# 建立連線
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 側邊欄導覽 ---
-page = st.sidebar.selectbox("切換功能", ["📅 每日計畫", "💰 隨手記帳"])
+st.title("💰 簡易記帳測試")
 
-# --- 每日計畫功能 ---
-if page == "📅 每日計畫":
-    st.header("今日目標達成")
-    
-    # 讀取現有任務
-    df_tasks = conn.read(worksheet="Tasks")
-    
-    with st.form("task_form"):
-        new_task = st.text_input("新增代辦事項")
-        submit = st.form_submit_button("加入計畫")
-        if submit and new_task:
-            new_data = pd.DataFrame([{"Task": new_task, "Status": "未完成"}])
-            updated_df = pd.concat([df_tasks, new_data], ignore_index=True)
-            conn.update(worksheet="Tasks", data=updated_df)
-            st.success("已加入！")
-            st.rerun()
+# 嘗試讀取 Expenses 分頁
+try:
+    # ttl=0 確保不使用舊快取，直接向 Google 要資料
+    df_ex = conn.read(worksheet="Expenses", ttl=0)
+    st.success("✅ 成功連線至 Google 表格！")
+except Exception as e:
+    st.error(f"❌ 連線失敗，請檢查共用權限或分頁名稱。錯誤訊息: {e}")
+    df_ex = pd.DataFrame(columns=["Date", "Category", "Amount"])
 
-    st.write("---")
-    st.dataframe(df_tasks) # 顯示清單
-
-# --- 記帳功能 ---
-elif page == "💰 隨手記帳":
-    st.header("支出紀錄")
+# 簡易記帳表單
+with st.form("expense_form", clear_on_submit=True):
+    amt = st.number_input("輸入測試金額", min_value=0, step=1)
+    submit = st.form_submit_button("儲存測試")
     
-    with st.form("expense_form"):
-        day = st.date_input("日期", date.today())
-        cat = st.selectbox("分類", ["食", "衣", "住", "行", "育兒", "轉職準備"])
-        amt = st.number_input("金額", min_value=0, step=1)
-        submit_ex = st.form_submit_button("儲存這筆支出")
-        
-        if submit_ex:
-            df_ex = conn.read(worksheet="Expenses")
-            new_ex = pd.DataFrame([{"Date": str(day), "Category": cat, "Amount": amt}])
-            updated_ex = pd.concat([df_ex, new_ex], ignore_index=True)
-            conn.update(worksheet="Expenses", data=updated_ex)
-            st.success(f"已記錄：{cat} ${amt}")
+    if submit:
+        new_data = pd.DataFrame([{"Date": str(date.today()), "Category": "測試", "Amount": amt}])
+        updated_df = pd.concat([df_ex, new_data], ignore_index=True)
+        conn.update(worksheet="Expenses", data=updated_df)
+        st.balloons()
+        st.success("資料已成功寫入 Google 表格！")
+        st.rerun()
+
+st.write("目前表格內容：")
+st.dataframe(df_ex)
