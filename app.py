@@ -2,12 +2,13 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import plotly.express as px
-from datetime import date, datetime # 引入 datetime 以抓取精確時間
+# 引入 timedelta 來進行時間加減
+from datetime import date, datetime, timedelta
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="家庭與旅遊帳本", layout="centered")
 
-# --- CSS 美化 (手機版優化) ---
+# --- CSS 美化 ---
 st.markdown("""
     <style>
     .stTextInput input, .stNumberInput input, .stSelectbox, .stDateInput { font-size: 18px !important; }
@@ -30,23 +31,26 @@ try:
     if df.empty:
         df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     else:
-        # 資料轉型
         df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
-        # 這裡 Date 維持字串或轉 datetime 都可以，為了顯示秒數，我們後續在顯示時處理
-        df["Date_dt"] = pd.to_datetime(df["Date"], errors="coerce") 
+        # 這裡為了排序正確，先轉成 datetime 物件
+        df["Date_dt"] = pd.to_datetime(df["Date"], errors="coerce")
         df["Month"] = df["Date_dt"].dt.strftime("%Y-%m")
         df["Note"] = df["Note"].fillna("")
 except Exception:
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
 
-# --- 4. 記帳輸入區 (修改點：預設展開 expanded=True) ---
-# 這裡改成 True，手機一打開就是輸入框
-with st.expander("📝 新增一筆支出", expanded=True): 
+# --- 關鍵修正：取得台灣目前的正確時間 ---
+# 伺服器時間 (UTC) + 8 小時 = 台灣時間
+taiwan_now = datetime.utcnow() + timedelta(hours=8)
+taiwan_date = taiwan_now.date()
+
+# --- 4. 記帳輸入區 ---
+with st.expander("📝 新增一筆支出", expanded=True):
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
-            # 這裡依然讓您選日期，方便補記昨天的帳
-            date_val = st.date_input("📅 日期", date.today())
+            # 預設日期改用「校正後的台灣日期」(避免半夜記帳時跳回昨天)
+            date_val = st.date_input("📅 日期", taiwan_date)
         with col2:
             cat_val = st.selectbox("📂 分類", [
                 "👶 育兒 (尿布/奶粉)", "✈️ 日本行 (機票/住宿)", "🍣 日本行 (吃喝玩樂)", 
@@ -61,20 +65,21 @@ with st.expander("📝 新增一筆支出", expanded=True):
         if submitted:
             if amount_val > 0:
                 try:
-                    # (修改點：加入精確時間)
-                    # 邏輯：使用「您選擇的日期」+「當下送出時的時間」
-                    current_time = datetime.now().time()
-                    # 組合出 2024-02-01 14:30:05 這樣的格式
-                    full_timestamp = datetime.combine(date_val, current_time).strftime("%Y-%m-%d %H:%M:%S")
+                    # 【關鍵修正】：使用台灣時間的「時:分:秒」
+                    # 如果使用者沒改日期，就用當下的時分秒
+                    # 如果使用者選了別天，我們一樣加上現在的時分秒，方便排序
+                    current_time_str = taiwan_now.strftime("%H:%M:%S")
+                    
+                    # 組合出完整的「日期 + 時間」字串 (例如 2026-01-28 14:35:00)
+                    full_timestamp = f"{date_val} {current_time_str}"
 
                     new_data = pd.DataFrame([{
-                        "Date": full_timestamp, # 存入完整的年月日時分秒
+                        "Date": full_timestamp, 
                         "Category": cat_val, 
                         "Amount": amount_val, 
                         "Note": note_val
                     }])
                     
-                    # 寫入流程
                     raw_df = conn.read(worksheet="Expenses", ttl=0)
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     conn.update(worksheet="Expenses", data=updated_df)
@@ -91,7 +96,6 @@ st.write("---")
 st.subheader("📊 月份支出分析")
 
 if not df.empty and len(df) > 0:
-    # 處理月份篩選
     available_months = sorted(df["Month"].dropna().unique(), reverse=True)
     if len(available_months) > 0:
         col_filter1, col_filter2 = st.columns([1, 2])
@@ -112,18 +116,4 @@ if not df.empty and len(df) > 0:
         if total_spent > 0:
             pie_data = plot_df.groupby("Category")["Amount"].sum().reset_index()
             fig = px.pie(pie_data, values="Amount", names="Category", title=chart_title, hole=0.4)
-            fig.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("查無此月份資料")
-else:
-    st.info("尚無資料")
-
-# --- 6. 詳細列表 (修改點：顯示幾點幾分幾秒) ---
-st.write("---")
-with st.expander("📋 查看詳細紀錄列表", expanded=True):
-    if not df.empty:
-        # 為了確保顯示出秒數，我們將 Date 欄位強制轉成字串顯示
-        # 這樣 Streamlit 就不會自動把它縮減成只有日期
-        display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+            fig.update_traces(textposition='inside', textinfo
