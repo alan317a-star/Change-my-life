@@ -159,34 +159,6 @@ def get_weather(lat, lon):
 
 # --- ⏳ 側邊欄 ---
 with st.sidebar:
-    st.header("📍 目前位置")
-    try:
-        loc = get_geolocation()
-    except:
-        loc = None
-
-    weather_text = "☁️ 定測中..."
-    location_name = "偵測中"
-    
-    if loc:
-        lat = loc['coords']['latitude']
-        lon = loc['coords']['longitude']
-        location_name = "📍 您的位置"
-        w_data = get_weather(lat, lon)
-        if w_data:
-            weather_text = w_data
-    else:
-        weather_text = "⏳ 等待 GPS..."
-        default_weather = get_weather(24.16, 120.68)
-        if default_weather:
-             pass
-
-    st.metric(location_name, weather_text)
-    if not loc:
-        st.caption("請在瀏覽器左上角點選「允許」位置存取。")
-    
-    st.write("---")
-    
     st.header("⏳ 重要時刻")
     love_start = date(2019, 6, 15)
     love_days = (taiwan_date - love_start).days
@@ -411,3 +383,4 @@ with tab3:
         
         if len(display_df) > 20:
             st.info("💡 僅顯示最近 20 筆，完整資料請至後台查看。")
+
