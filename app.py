@@ -111,7 +111,7 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- ⏳ 重要日倒數 (側邊欄) - 更新版 ---
+# --- ⏳ 重要日倒數 (側邊欄) ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
     
@@ -129,7 +129,6 @@ with st.sidebar:
     elif baby_days == 0:
         st.success("🎂 就是今天！寶寶誕生啦！")
     else:
-        # 如果日期還沒到 (例如現在是 2025年初)，顯示倒數
         st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
 
     st.write("---")
@@ -171,7 +170,7 @@ st.write("---")
 # --- 📂 分頁切換 ---
 tab1, tab2, tab3 = st.tabs(["📝 記帳", "📊 分析", "📋 列表"])
 
-# === 分頁 1: 記帳輸入 + 所有刪除功能 ===
+# === 分頁 1: 記帳輸入 + 摺疊刪除區 ===
 with tab1:
     st.markdown("### 😈 紅字小壞蛋，要花的值得！")
     with st.form("entry_form", clear_on_submit=True):
@@ -230,49 +229,48 @@ with tab1:
             else:
                 st.warning("⚠️ 金額不能為 0")
     
-    # ----------------------------
-    # 移到底部的刪除管理區
-    # ----------------------------
     st.write("---")
-    st.markdown("### 🗑️ 紀錄管理與刪除")
     
-    # 1. 快速復原 (Undo)
-    st.markdown('<div class="del-btn">', unsafe_allow_html=True)
-    if st.button("↩️ 刪除剛記的那一筆 (Undo)"):
-        try:
-            raw_df = conn.read(worksheet="Expenses", ttl=0)
-            if not raw_df.empty:
-                updated_df = raw_df.iloc[:-1]
-                conn.update(worksheet="Expenses", data=updated_df)
-                st.toast("已復原 (刪除成功)")
-                time.sleep(1.5)
-                st.rerun()
-            else:
-                st.info("已經沒有資料")
-        except Exception as e:
-            st.error(f"刪除失敗: {e}")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # 2. 指定刪除 (下拉選單)
-    if not df.empty:
-        st.markdown("---")
-        st.caption("或是選擇刪除特定的一筆：")
-        delete_options = [f"{i}: {row['Date']} | {row['Category']} | ${row['Amount']} | {row['Note']}" for i, row in df.iterrows()]
-        selected_item = st.selectbox("🔍 選擇要刪除的紀錄：", ["(請選擇)"] + list(reversed(delete_options)))
-        
+    # --- 修改點：使用 Expander 收納刪除功能 ---
+    with st.expander("記錯帳按這邊", expanded=False):
+        # 1. 快速復原 (Undo)
+        st.caption("👇 剛剛記錯了嗎？這裡可以快速復原上一筆")
         st.markdown('<div class="del-btn">', unsafe_allow_html=True)
-        if st.button("❌ 確認刪除此筆紀錄"):
-            if selected_item != "(請選擇)":
-                try:
-                    index_to_drop = int(selected_item.split(":")[0])
-                    raw_df = conn.read(worksheet="Expenses", ttl=0)
-                    updated_df = raw_df.drop(index_to_drop)
+        if st.button("↩️ 刪除剛記的那一筆 (Undo)"):
+            try:
+                raw_df = conn.read(worksheet="Expenses", ttl=0)
+                if not raw_df.empty:
+                    updated_df = raw_df.iloc[:-1]
                     conn.update(worksheet="Expenses", data=updated_df)
-                    st.success(f"✅ 刪除成功：{selected_item}")
+                    st.toast("已復原 (刪除成功)")
                     time.sleep(1.5)
                     st.rerun()
-                except Exception as e:
-                    st.error(f"刪除失敗: {e}")
+                else:
+                    st.info("已經沒有資料")
+            except Exception as e:
+                st.error(f"刪除失敗: {e}")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # 2. 指定刪除 (下拉選單)
+        if not df.empty:
+            st.markdown("---")
+            st.caption("或是選擇刪除特定的一筆：")
+            delete_options = [f"{i}: {row['Date']} | {row['Category']} | ${row['Amount']} | {row['Note']}" for i, row in df.iterrows()]
+            selected_item = st.selectbox("🔍 選擇要刪除的紀錄：", ["(請選擇)"] + list(reversed(delete_options)))
+            
+            st.markdown('<div class="del-btn">', unsafe_allow_html=True)
+            if st.button("❌ 確認刪除此筆紀錄"):
+                if selected_item != "(請選擇)":
+                    try:
+                        index_to_drop = int(selected_item.split(":")[0])
+                        raw_df = conn.read(worksheet="Expenses", ttl=0)
+                        updated_df = raw_df.drop(index_to_drop)
+                        conn.update(worksheet="Expenses", data=updated_df)
+                        st.success(f"✅ 刪除成功：{selected_item}")
+                        time.sleep(1.5)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"刪除失敗: {e}")
 
 
 # === 分頁 2: 圓餅圖分析 ===
