@@ -192,7 +192,7 @@ with st.sidebar:
     baby_born = date(2025, 9, 12)
     baby_days = (taiwan_date - baby_born).days
     if baby_days > 0:
-        st.success(f"👶 寶寶來到地球 **{baby_days}** 天囉！")
+        st.success(f"👶 承淅來到地球 **{baby_days}** 天囉！")
     elif baby_days == 0:
         st.success("🎂 就是今天！寶寶誕生啦！")
     else:
@@ -259,7 +259,7 @@ with tab1:
                 "🍔 飲食 (三餐/飲料)",
                 "🛒 日用 (超市/藥妝)",
                 "🚗 交通 (車票/加油)",
-                "🏠 居家 (房貸/水電/)",
+                "🏠 居家 (房貸/水電)",
                 "👗 服飾 (衣物/鞋包)",
                 "💆‍♂️ 醫療 (看診/藥品)",
                 "🎮 娛樂 (電影/旅遊/遊戲)",
@@ -270,7 +270,7 @@ with tab1:
             ])
             
         amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
-        note_val = st.text_input("📝 備註 (詳細記錄謝謝)")
+        note_val = st.text_input("📝 備註 (~詳細記錄謝謝~)")
         
         st.markdown('<div class="save-btn">', unsafe_allow_html=True)
         submitted = st.form_submit_button("💾 確認儲存")
@@ -389,4 +389,5 @@ with tab3:
         # 1. 顯示資料 (原生表格)
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
         st.dataframe(display_df, use_container_width=True, hide_index=True)
+
 
