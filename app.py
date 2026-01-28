@@ -1,12 +1,13 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import plotly.express as px  # 引入繪圖套件
 from datetime import date
 
-# --- 頁面設定 ---
-st.set_page_config(page_title="我們的家庭花費", layout="centered")
+# --- 1. 頁面設定 ---
+st.set_page_config(page_title="家庭與旅遊帳本", layout="centered")
 
-# --- CSS 美化 (大按鈕、優化排版) ---
+# --- CSS 美化 ---
 st.markdown("""
     <style>
     .stTextInput input, .stNumberInput input, .stSelectbox, .stDateInput { font-size: 18px !important; }
@@ -20,21 +21,37 @@ st.markdown("""
 
 st.title("💰 家庭與旅遊帳本")
 
-# --- 建立連線 (使用 Secrets 裡的機器人金鑰) ---
+# --- 2. 建立連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 記帳輸入區 ---
-st.markdown("### 📝 新增一筆支出")
+# --- 3. 讀取與處理資料 (關鍵步驟) ---
+try:
+    df = conn.read(worksheet="Expenses", ttl=0)
+    if df.empty:
+        df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
+    else:
+        # 【重要】把資料轉成正確格式，才能畫圖
+        # 1. 金額轉為數字 (遇到無法轉換的變成 0)
+        df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
+        # 2. 日期轉為時間格式
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+        # 3. 建立一個「月份」欄位 (例如 2024-02) 用來篩選
+        df["Month"] = df["Date"].dt.strftime("%Y-%m")
+        # 4. 處理空值
+        df["Note"] = df["Note"].fillna("")
+except Exception:
+    df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
 
-with st.container():
+# --- 4. 記帳輸入區 ---
+with st.expander("📝 新增一筆支出", expanded=False): # 用摺疊區塊讓畫面乾淨點
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
             date_val = st.date_input("📅 日期", date.today())
         with col2:
             cat_val = st.selectbox("📂 分類", [
-                "👶 育兒 ", "✈️ 旅遊 (機票/住宿)",  
-                "🚗 交通/加油", "🏠 家用雜支", "👔 治裝", "💰 其他"
+                "👶 育兒 (尿布/奶粉)", "✈️ 日本行 (機票/住宿)", "🍣 日本行 (吃喝玩樂)", 
+                "🚗 交通/加油", "🏠 家用雜支", "👔 個人/治裝", "💰 其他"
             ])
             
         amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
@@ -45,35 +62,20 @@ with st.container():
         if submitted:
             if amount_val > 0:
                 try:
-                    # 讀取現有資料
-                    df = conn.read(worksheet="Expenses", ttl=0)
-                    if df.empty: df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
+                    # 寫入時轉回字串處理，避免格式跑掉
+                    new_data = pd.DataFrame([{
+                        "Date": str(date_val), 
+                        "Category": cat_val, 
+                        "Amount": amount_val, 
+                        "Note": note_val
+                    }])
                     
-                    # 建立新資料並寫入
-                    new_data = pd.DataFrame([{"Date": str(date_val), "Category": cat_val, "Amount": amount_val, "Note": note_val}])
-                    updated_df = pd.concat([df, new_data], ignore_index=True)
+                    # 重新讀取原始資料(避免格式衝突)並合併
+                    raw_df = conn.read(worksheet="Expenses", ttl=0)
+                    updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     
                     conn.update(worksheet="Expenses", data=updated_df)
-                    st.success(f"✅ 已記錄：${amount_val} ({cat_val})")
+                    st.success(f"✅ 已記錄：${amount_val}")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"寫入失敗：{e}")
-            else:
-                st.warning("⚠️ 金額不能為 0")
-
-# --- 顯示紀錄區 ---
-st.write("---")
-st.markdown("### 📊 最近 5 筆紀錄")
-
-try:
-    df = conn.read(worksheet="Expenses", ttl=0)
-    if not df.empty:
-        st.dataframe(df.tail(5).iloc[::-1], use_container_width=True, hide_index=True)
-        # 計算總金額
-        total = pd.to_numeric(df["Amount"], errors='coerce').sum()
-        st.metric("累積總支出", f"${total:,.0f}")
-    else:
-        st.info("目前沒有資料，快記下第一筆吧！")
-except:
-    st.info("連線中...如果這是第一次使用，請先新增一筆資料。")
-
+                    st.error(
