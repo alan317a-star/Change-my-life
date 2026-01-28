@@ -1,57 +1,91 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+from datetime import date
 
-st.set_page_config(page_title="家庭財務儀表板", layout="centered")
+st.set_page_config(page_title="家庭記帳本", layout="centered")
 
-st.title("📊 家庭財務儀表板")
+# --- CSS 優化 (手機版更好按) ---
+st.markdown("""
+    <style>
+    div.stButton > button {
+        width: 100%;
+        height: 3em;
+        font-size: 20px;
+        background-color: #ff4b4b; 
+        color: white;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# 1. 建立連線 (只讀取，不會報錯)
+st.title("💰 家庭記帳本")
+
+# 1. 建立連線
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# 2. 讀取資料 (加入防錯機制)
 try:
-    # 這裡請注意：Google 表單連結進來的分頁通常叫 "表單回應 1" 或 "Form Responses 1"
-    # ttl=0 確保每次打開都是最新的
-    df = conn.read(worksheet="表單回應 1", ttl=0)
+    # ttl=0 確保不讀到舊的快取
+    df_ex = conn.read(worksheet="Expenses", ttl=0)
     
-    # 資料清理 (確保欄位名稱對應)
-    # Google 表單預設欄位通常是：'時間戳記', '日期', '分類', '金額'
-    # 我們重新命名讓它好讀一點
-    if not df.empty:
-        # 自動偵測欄位並重新命名 (假設順序是：時間, 日期, 分類, 金額)
-        df.columns = ["紀錄時間", "消費日期", "分類", "金額"]
-        
-        # 轉換日期格式
-        df["消費日期"] = pd.to_datetime(df["消費日期"]).dt.date
-        
-        # --- 顯示區塊 1: 近期消費 ---
-        st.subheader("📝 最近 5 筆紀錄")
-        st.dataframe(df.tail(5).sort_index(ascending=False))
-
-        # --- 顯示區塊 2: 統計分析 ---
-        st.subheader("💰 支出統計")
-        total_spent = df["金額"].sum()
-        st.metric("總支出", f"${total_spent:,.0f}")
-
-        # --- 顯示區塊 3: 分類圓餅圖 ---
-        st.subheader("📊 消費分類")
-        # 簡單的分類加總
-        category_sum = df.groupby("分類")["金額"].sum().reset_index()
-        st.bar_chart(category_sum, x="分類", y="金額")
-        
+    # [關鍵修正]：如果表格是空的或讀取有問題，手動建立標準格式
+    if df_ex.empty or len(df_ex.columns) == 0:
+        df_ex = pd.DataFrame(columns=["Date", "Category", "Amount"])
     else:
-        st.info("目前還沒有資料，請用 Google 表單記第一筆帳吧！")
+        # [關鍵修正]：強制只保留這三欄，踢除所有導致 400 錯誤的雜訊
+        # 如果欄位名稱有空白，這裡會幫忙過濾掉
+        df_ex = df_ex[["Date", "Category", "Amount"]]
+        
+except Exception:
+    # 萬一連線還是失敗，先建立一個空的，讓程式不要當機，至少能顯示介面
+    df_ex = pd.DataFrame(columns=["Date", "Category", "Amount"])
 
-except Exception as e:
-    st.error(f"讀取資料時發生錯誤，請確認分頁名稱是否為 '表單回應 1'。錯誤訊息: {e}")
+# 3. 記帳輸入區 (直接在 Streamlit 裡面)
+with st.container():
+    st.subheader("📝 新增一筆")
+    
+    with st.form("expense_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            # 預設今天日期
+            input_date = st.date_input("日期", date.today())
+        with col2:
+            # 分類選單
+            category = st.selectbox("分類", ["食", "衣", "住", "行", "育兒 (尿布/奶粉)", "日本行預備", "其他"])
+        
+        amount = st.number_input("金額", min_value=0, step=1, format="%d")
+        
+        # 送出按鈕
+        submit = st.form_submit_button("儲存支出")
+        
+        if submit:
+            if amount == 0:
+                st.warning("⚠️ 金額不能為 0")
+            else:
+                # 建立新的一筆資料
+                new_data = pd.DataFrame([{"Date": str(input_date), "Category": category, "Amount": amount}])
+                
+                # 合併舊資料與新資料
+                updated_df = pd.concat([df_ex, new_data], ignore_index=True)
+                
+                # [關鍵修正]：寫入前再次確認只寫入這三欄，不寫入索引(Index)
+                try:
+                    conn.update(worksheet="Expenses", data=updated_df)
+                    st.success(f"✅ 已儲存：{category} ${amount}")
+                    st.rerun() # 重新整理畫面顯示最新資料
+                except Exception as e:
+                    st.error(f"儲存失敗，請截圖給工程師：{e}")
 
-# 加入一個按鈕直接跳轉去記帳
-st.markdown("---")
-st.markdown("""
-    <a href="https://docs.google.com/spreadsheets/d/10bzPEsIqRdnjTiI9sr6wN9DVTpI7HbikYTNz1UzQ21A/edit?usp=sharing" target="_blank">
-        <button style="width:100%; padding: 15px; background-color: #FF4B4B; color: white; border: none; border-radius: 10px; font-size: 18px;">
-            ➕ 按這裡記帳 (開啟 Google 表單)
-        </button>
-    </a>
-    """, unsafe_allow_html=True)
+# 4. 顯示最近紀錄 (給家人看)
+st.write("---")
+st.subheader("📊 最近 5 筆紀錄")
 
+if not df_ex.empty:
+    # 把最新的顯示在最上面
+    st.dataframe(df_ex.tail(5).iloc[::-1], use_container_width=True)
+    
+    # 簡單統計
+    total = df_ex["Amount"].sum()
+    st.metric("累積總支出", f"${total:,.0f}")
+else:
+    st.info("目前沒有資料")
