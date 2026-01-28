@@ -214,7 +214,7 @@ with tab1:
                     # 震動效果 (僅限部分手機瀏覽器)
                     components.html("<script>window.navigator.vibrate([100,50,100]);</script>", height=0, width=0)
                     
-                    st.toast("👏記帳開始，就是成功的開始！")
+                    st.toast("記帳開始，就是成功的開始！")
                     st.success(f"✅ 已記錄：${amount_val}")
                     time.sleep(1.2)
                     st.rerun()
@@ -270,5 +270,6 @@ with tab3:
                     st.caption(f"{row['Date']} | {row['Note']}")
                 with c2:
                     st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
+
 
 
