@@ -8,6 +8,13 @@ import calendar
 import time
 import requests
 
+# --- 關鍵修改：引入 GPS 套件 ---
+# 如果您看到錯誤，請在終端機輸入：pip install streamlit-js-eval
+try:
+    from streamlit_js_eval import get_geolocation
+except ImportError:
+    st.error("⚠️ 請先安裝 GPS 套件：在終端機輸入 `pip install streamlit-js-eval`")
+
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
@@ -113,27 +120,6 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- 📍 城市座標資料庫 (模擬 GPS) ---
-CITY_COORDS = {
-    "📍 台中市 (北區)": (24.16, 120.68),
-    "📍 台北市": (25.03, 121.56),
-    "📍 新北市": (25.01, 121.46),
-    "📍 桃園市": (24.99, 121.30),
-    "📍 新竹市": (24.81, 120.96),
-    "📍 苗栗縣": (24.56, 120.82),
-    "📍 彰化縣": (24.05, 120.51),
-    "📍 南投縣": (23.96, 120.97),
-    "📍 雲林縣": (23.70, 120.43),
-    "📍 嘉義市": (23.48, 120.44),
-    "📍 台南市": (22.99, 120.21),
-    "📍 高雄市": (22.62, 120.30),
-    "📍 屏東縣": (22.55, 120.54),
-    "📍 宜蘭縣": (24.70, 121.72),
-    "📍 花蓮縣": (23.98, 121.60),
-    "📍 台東縣": (22.76, 121.14),
-    "✈️ 日本福岡": (33.59, 130.40) # 為了您的旅行！
-}
-
 # --- 🌤️ 天氣功能 ---
 @st.cache_data(ttl=600)
 def get_weather(lat, lon):
@@ -155,38 +141,54 @@ def get_weather(lat, lon):
     except:
         return None
 
-# --- ⏳ 側邊欄：天氣 + 重要時刻 + 設定 ---
+# --- ⏳ 側邊欄：GPS + 重要時刻 ---
 with st.sidebar:
-    # 1. 位置選擇 (模擬 GPS)
-    st.header("📍 選擇您的位置")
-    selected_city = st.selectbox(
-        "切換城市 (即時更新天氣)", 
-        list(CITY_COORDS.keys()),
-        index=0 # 預設選第一個 (台中)
-    )
+    st.header("📍 目前位置")
     
-    # 取得選定城市的座標
-    lat, lon = CITY_COORDS[selected_city]
+    # === 關鍵修改：GPS 定位 ===
+    # 第一次執行時，瀏覽器會跳出「是否允許存取位置」，請點選「允許」
+    try:
+        loc = get_geolocation()
+    except:
+        loc = None
+
+    weather_text = "☁️ 定位中..."
+    location_name = "偵測中"
     
-    # 顯示天氣
-    current_weather = get_weather(lat, lon)
-    if current_weather:
-        st.metric(f"目前的 {selected_city[:3]} 天氣", current_weather)
+    if loc:
+        lat = loc['coords']['latitude']
+        lon = loc['coords']['longitude']
+        location_name = "📍 您的位置"
+        
+        # 取得天氣
+        w_data = get_weather(lat, lon)
+        if w_data:
+            weather_text = w_data
     else:
-        st.metric("天氣", "☁️ 讀取中...")
+        # 如果還沒按允許，或定位失敗，預設顯示台中
+        weather_text = "⏳ 等待 GPS..."
+        # 預設台中北區座標，避免空白
+        default_weather = get_weather(24.16, 120.68)
+        if default_weather:
+             # 如果真的抓不到，就先顯示台中，但標註是預設
+             pass
+
+    st.metric(location_name, weather_text)
+    if not loc:
+        st.caption("請在瀏覽器左上角點選「允許」位置存取，即可顯示當地氣溫。")
     
     st.write("---")
     
     # 2. 重要時刻
     st.header("⏳ 重要時刻")
     
-    # 在一起
+    # 在一起 (2019/06/15)
     love_start = date(2019, 6, 15)
     love_days = (taiwan_date - love_start).days
     if love_days > 0:
         st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
     
-    # 寶寶出生
+    # 寶寶出生 (114/09/12 -> 2025/09/12)
     baby_born = date(2025, 9, 12)
     baby_days = (taiwan_date - baby_born).days
     if baby_days > 0:
