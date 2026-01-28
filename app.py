@@ -8,19 +8,33 @@ import time
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 ---
+# --- CSS 美化 (修改點：針對 iPhone 深色模式強制黑字) ---
 st.markdown("""
     <style>
-    /* 輸入框本體設定：字體加大 + 淡黃色背景 */
+    /* 輸入框本體設定：淡黃色背景 + 強制黑字 */
     .stTextInput input, .stNumberInput input, .stDateInput input {
         font-size: 18px !important;
         background-color: #fff9c4 !important;
         color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important; /* 關鍵：強制 iPhone 顯示黑字 */
+        caret-color: #000000 !important; /* 游標顏色 */
     }
     
-    /* 下拉選單特別設定 */
+    /* 下拉選單 (Selectbox) 特別設定 */
     div[data-baseweb="select"] > div {
         background-color: #fff9c4 !important;
+        color: #000000 !important;
+    }
+    
+    /* 確保下拉選單裡面的文字 (span) 也是黑色的 */
+    div[data-baseweb="select"] span {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+    
+    /* 下拉選單的箭頭圖示改成深色，不然會看不到 */
+    div[data-baseweb="select"] svg {
+        fill: #000000 !important;
     }
     
     /* 按鈕設定 */
@@ -68,35 +82,29 @@ current_month_str = taiwan_now.strftime("%Y-%m")
 # --- 🎮 遊戲化預算設定 (側邊欄) ---
 with st.sidebar:
     st.header("⚙️ 遊戲設定 (預算)")
-    # 預設 30000，您可以自己調整
     monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
     st.info("💡 設定好預算，右邊會顯示您的「闖關進度」喔！")
 
-# --- 🎮 顯示錢包血量條 (核心功能) ---
-# 計算本月已花費金額
+# --- 🎮 顯示錢包血量條 ---
 if not df.empty:
     current_month_df = df[df["Month"] == current_month_str]
     current_spent = current_month_df["Amount"].sum()
 else:
     current_spent = 0
 
-# 計算百分比
 if monthly_budget > 0:
     percent = current_spent / monthly_budget
 else:
     percent = 0
 
-# 顯示進度條邏輯
 st.write("---")
 st.subheader(f"🛡️ 本月錢包防禦戰 ({current_month_str})")
 
 col_bar1, col_bar2 = st.columns([3, 1])
 
 with col_bar1:
-    # 決定遊戲狀態與顏色
     if percent < 0.5:
         status_text = "🟢 勇者狀態良好，繼續冒險！"
-        bar_color = "green" # Streamlit progress 無法直接改色，但我們可以用文字標示
     elif percent < 0.8:
         status_text = "🟡 遭遇小怪，錢包受傷中..."
     elif percent < 1.0:
@@ -105,13 +113,10 @@ with col_bar1:
         status_text = "☠️ GAME OVER... 錢包已陣亡 (超支)"
 
     st.markdown(f'<div class="game-status">{status_text}</div>', unsafe_allow_html=True)
-    
-    # 進度條 (Streamlit 數值不能超過 1.0，所以要做限制)
     display_percent = min(percent, 1.0)
     st.progress(display_percent)
 
 with col_bar2:
-    # 顯示數字詳情
     remaining = monthly_budget - current_spent
     st.metric("剩餘血量", f"${remaining:,.0f}", delta=f"-${current_spent:,.0f} 已損血", delta_color="inverse")
 
@@ -178,7 +183,6 @@ if not df.empty:
     with st.expander("🗑️ 管理與刪除紀錄", expanded=False):
         st.warning("⚠️ 刪除後無法復原，請小心操作")
         
-        # 1. 快速刪除最後一筆
         st.markdown('<div class="del-btn">', unsafe_allow_html=True)
         if st.button("↩️ 刪除「最後一筆」紀錄 (Undo)"):
             try:
@@ -197,7 +201,6 @@ if not df.empty:
         
         st.markdown("---")
         
-        # 2. 指定刪除
         delete_options = [
             f"{i}: {row['Date']} | {row['Category']} | ${row['Amount']} | {row['Note']}" 
             for i, row in df.iterrows()
