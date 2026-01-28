@@ -47,16 +47,26 @@ except Exception:
 taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 
-# --- 4. 記帳輸入區 (修改點：標題改為紅字小壞蛋) ---
+# --- 4. 記帳輸入區 ---
 with st.expander("😈 紅字小壞蛋，錢要花的值得！", expanded=True):
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
             date_val = st.date_input("📅 日期", taiwan_date)
         with col2:
+            # 修改點：改為通用的大眾化分類
             cat_val = st.selectbox("📂 分類", [
-                "👶 育兒 (尿布/奶粉)", "✈️ 日本行 (機票/住宿)", "🍣 日本行 (吃喝玩樂)", 
-                "🚗 交通/加油", "🏠 家用雜支", "👔 個人/治裝", "💰 其他"
+                "🍔 飲食 (三餐/飲料)",
+                "🛒 日用 (超市/藥妝)",
+                "🚗 交通 (車票/加油)",
+                "🏠 居家 (房租/水電/網路)",
+                "👗 服飾 (衣物/鞋包)",
+                "💆‍♂️ 醫療 (看診/藥品)",
+                "🎮 娛樂 (電影/旅遊/遊戲)",
+                "📚 教育 (書籍/課程)",
+                "💼 保險稅務",
+                "👶 子女 (尿布/學費)", 
+                "💸 其他"
             ])
             
         amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
@@ -176,4 +186,3 @@ with st.expander("📋 查看詳細紀錄列表", expanded=True):
     if not df.empty:
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
         st.dataframe(display_df, use_container_width=True, hide_index=True)
-
