@@ -48,7 +48,7 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 
 # --- 4. 記帳輸入區 (修改點：標題改為紅字小壞蛋) ---
-with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
+with st.expander("😈 紅字小壞蛋，錢要花的值得！", expanded=True):
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -176,3 +176,4 @@ with st.expander("📋 查看詳細紀錄列表", expanded=True):
     if not df.empty:
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
         st.dataframe(display_df, use_container_width=True, hide_index=True)
+
