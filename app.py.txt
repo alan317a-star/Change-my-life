@@ -11,7 +11,7 @@ st.subheader("📝 新增一筆")
 
 # [請將下方的網址換成您的 Google 表單網址]
 # 記得網址後面要加上 ?embedded=true 這樣才會漂亮
-google_form_url = "https://docs.google.com/forms/d/e/您的表單ID/viewform?embedded=true"
+google_form_url = "https://docs.google.com/forms/d/e/https://docs.google.com/spreadsheets/d/10bzPEsIqRdnjTiI9sr6wN9DVTpI7HbikYTNz1UzQ21A/edit?usp=sharing/viewform?embedded=true"
 
 # 使用 iframe 將表單「種」在 App 裡面
 components.iframe(google_form_url, height=600, scrolling=True)
@@ -37,3 +37,4 @@ try:
         
 except Exception:
     st.warning("請確認 Google 表單是否已連結到這份試算表，且分頁名稱正確。")
+
