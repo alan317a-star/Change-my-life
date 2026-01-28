@@ -47,36 +47,40 @@ st.markdown("""
     /* 進度條文字 */
     .game-status { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
 
-    /* ✨ 跳窗 (Toast) 完美置中優化 ✨ */
+    /* ✨ 跳窗 (Toast) 手機版防裁切終極修正 ✨ */
     div[data-testid="stToast"] {
         width: 90vw !important; max-width: 500px !important;
         background-color: #ffffff !important;
         border: 2px solid #FF4B4B !important;
-        border-radius: 50px !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important; /* 增加浮起陰影 */
+        border-radius: 15px !important; /* 圓角稍微改小，避免切到角落文字 */
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
         z-index: 999999 !important;
         
-        /* 關鍵置中語法 */
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
+        
+        /* 關鍵：自動高度與增加內距 */
+        height: auto !important; 
+        min-height: 65px !important; 
         padding: 15px 10px !important; 
     }
     
-    /* 強制內容容器與文字置中 */
     div[data-testid="stToast"] > div {
         justify-content: center !important;
         text-align: center !important;
         width: 100% !important;
+        overflow: visible !important; /* 防止內容被隱藏 */
     }
     
-    /* 文字樣式 */
     div[data-testid="stToast"] p {
         color: #000000 !important;
-        font-size: 19px !important;
-        font-weight: 800 !important; /* 特粗體 */
+        font-size: 18px !important; /* 稍微調整大小確保安全 */
+        font-weight: 800 !important;
+        line-height: 1.5 !important; /* 增加行高，這能解決文字上下被切掉的問題 */
         margin: 0 !important;
         text-align: center !important;
+        white-space: pre-wrap !important; /* 允許文字換行 */
     }
     
     /* 分頁籤 (Tabs) 字體放大 */
@@ -189,7 +193,7 @@ with tab1:
                     # 震動回饋
                     components.html("<script>window.navigator.vibrate([100,50,100]);</script>", height=0, width=0)
                     
-                    # 🌟 這裡會顯示精美的置中跳窗
+                    # 🌟 修正後的跳窗文字，保證不被裁切
                     st.toast("開始記帳，就是成功的開始！")
                     st.success(f"✅ 已記錄：${amount_val} — **開始記帳，就是成功的開始！**")
                     
