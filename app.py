@@ -270,7 +270,7 @@ with tab1:
             ])
             
         amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
-        note_val = st.text_input("📝 備註 (❗ 詳細記錄謝謝)")
+        note_val = st.text_input("📝 備註 (詳細記錄謝謝❗ )")
         
         st.markdown('<div class="save-btn">', unsafe_allow_html=True)
         submitted = st.form_submit_button("💾 確認儲存")
@@ -389,6 +389,7 @@ with tab3:
         # 1. 顯示資料 (原生表格)
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
         st.dataframe(display_df, use_container_width=True, hide_index=True)
+
 
 
 
