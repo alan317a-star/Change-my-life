@@ -88,21 +88,8 @@ st.markdown("""
     }
     
     /* 卡片式列表樣式 */
-    .card-title {
-        font-size: 18px;
-        font-weight: bold;
-        color: #333;
-    }
-    .card-note {
-        font-size: 14px;
-        color: #666;
-    }
-    .card-amount {
-        font-size: 20px;
-        font-weight: bold;
-        color: #FF4B4B;
-        text-align: right;
-    }
+    .card-title { font-size: 18px; font-weight: bold; color: #333; }
+    .card-amount { font-size: 20px; font-weight: bold; color: #FF4B4B; text-align: right; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -147,7 +134,7 @@ with st.sidebar:
         st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
 
     st.write("---")
-    st.header("⚙️ 遊戲設定 (預算)")
+    st.header("⚙️ 遊戲設定")
     monthly_budget = st.number_input("本月錢包總血量 (預算)", value=30000, step=1000)
 
 # --- 🛡️ 錢包防禦戰 ---
@@ -157,38 +144,23 @@ if not df.empty:
 else:
     current_spent = 0
 
-if monthly_budget > 0:
-    percent = current_spent / monthly_budget
-else:
-    percent = 0
+percent = (current_spent / monthly_budget) if monthly_budget > 0 else 0
 
 st.subheader(f"🛡️ 錢包防禦戰")
+_, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
+days_left = last_day - taiwan_date.day + 1
+rem_budget = monthly_budget - current_spent
+daily_budget = rem_budget / days_left if days_left > 0 else 0
 
-_, last_day_of_month = calendar.monthrange(taiwan_date.year, taiwan_date.month)
-days_remaining_in_month = last_day_of_month - taiwan_date.day + 1
-remaining_budget = monthly_budget - current_spent
-daily_budget = remaining_budget / days_remaining_in_month if days_remaining_in_month > 0 else 0
-
-col_bar1, col_bar2, col_bar3 = st.columns([2, 1, 1])
-
-with col_bar1:
-    if percent < 0.5:
-        status_text = "🟢 勇者狀態良好！"
-    elif percent < 0.8:
-        status_text = "🟡 遭遇小怪，受傷中..."
-    elif percent < 1.0:
-        status_text = "🔴 BOSS 戰預警！告急！"
-    else:
-        status_text = "☠️ 錢包已陣亡"
-    st.markdown(f'<div class="game-status">{status_text}</div>', unsafe_allow_html=True)
-    display_percent = min(percent, 1.0)
-    st.progress(display_percent)
-
-with col_bar2:
-    st.metric("剩餘血量", f"${remaining_budget:,.0f}", delta=f"-${current_spent:,.0f}", delta_color="inverse")
-
-with col_bar3:
-    st.metric("📅 今日可用", f"${daily_budget:,.0f}", help="剩餘預算 ÷ 本月剩餘天數")
+col1, col2, col3 = st.columns([2, 1, 1])
+with col1:
+    status = "🟢 勇者狀態良好！" if percent < 0.5 else "🟡 受傷中..." if percent < 0.8 else "🔴 告急！" if percent < 1.0 else "☠️ 陣亡"
+    st.markdown(f'<div class="game-status">{status}</div>', unsafe_allow_html=True)
+    st.progress(min(percent, 1.0))
+with col2:
+    st.metric("剩餘血量", f"${rem_budget:,.0f}")
+with col3:
+    st.metric("今日可用", f"${daily_budget:,.0f}")
 
 st.write("---")
 
@@ -199,43 +171,54 @@ tab1, tab2, tab3 = st.tabs(["📝 記帳", "📊 分析", "📋 列表"])
 with tab1:
     st.markdown("### 😈 小壞蛋，錢要花的值得！")
     with st.form("entry_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            date_val = st.date_input("📅 日期", taiwan_date)
-        with col2:
-            cat_val = st.selectbox("📂 分類", [
-                "🍔 飲食 (三餐/飲料)",
-                "🛒 日用 (超市/藥妝)",
-                "🚗 交通 (車票/加油)",
-                "🏠 居家 (房貸/水電)",
-                "👗 服飾 (衣物/鞋包)",
-                "💆‍♂️ 醫療 (看診/藥品)",
-                "🎮 娛樂 (電影/旅遊/遊戲)",
-                "📚 教育 (書籍/課程)",
-                "💼 保險稅務",
-                "👶 子女 (尿布/學費)", 
-                "💸 其他"
-            ])
+        f_col1, f_col2 = st.columns(2)
+        with f_col1:
+            d_val = st.date_input("📅 日期", taiwan_date)
+        with f_col2:
+            c_val = st.selectbox("📂 分類", ["🍔 飲食", "🛒 日用", "🚗 交通", "🏠 居家", "👗 服飾", "💆‍♂️ 醫療", "🎮 娛樂", "📚 教育", "💼 保險", "👶 子女", "💸 其他"])
             
-        amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
-        note_val = st.text_input("📝 備註 (詳細記錄謝謝❗ )")
+        a_val = st.number_input("💲 金額", min_value=0, step=10)
+        n_val = st.text_input("📝 備註")
         
         st.markdown('<div class="save-btn">', unsafe_allow_html=True)
-        submitted = st.form_submit_button("💾 確認儲存")
+        if st.form_submit_button("💾 確認儲存"):
+            if a_val > 0:
+                ts = f"{d_val} {taiwan_now.strftime('%H:%M:%S')}"
+                new_row = pd.DataFrame([{"Date": ts, "Category": c_val, "Amount": a_val, "Note": n_val}])
+                raw = conn.read(worksheet="Expenses", ttl=0)
+                updated = pd.concat([raw, new_row], ignore_index=True)
+                conn.update(worksheet="Expenses", data=updated)
+                st.toast("記帳成功！")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.warning("請輸入金額")
         st.markdown('</div>', unsafe_allow_html=True)
-        
-        if submitted:
-            if amount_val > 0:
-                try:
-                    current_time_str = taiwan_now.strftime("%H:%M:%S")
-                    full_timestamp = f"{date_val} {current_time_str}"
 
-                    new_data = pd.DataFrame([{
-                        "Date": full_timestamp, 
-                        "Category": cat_val, 
-                        "Amount": amount_val, 
-                        "Note": note_val
-                    }])
-                    
-                    raw_df = conn.read(worksheet="Expenses", ttl=0)
-                    updated_df = pd.concat([raw_
+# === 分頁 2: 分析 ===
+with tab2:
+    if not df.empty:
+        mon = st.selectbox("🗓️ 月份", ["全部"] + sorted(df["Month"].unique().tolist(), reverse=True))
+        pdf = df if mon == "全部" else df[df["Month"] == mon]
+        st.metric("總支出", f"${pdf['Amount'].sum():,.0f}")
+        fig = px.pie(pdf, values="Amount", names="Category", hole=0.4)
+        st.plotly_chart(fig, use_container_width=True)
+
+# === 分頁 3: 列表 ===
+with tab3:
+    if not df.empty:
+        for _, row in df.sort_values("Date", ascending=False).head(20).iterrows():
+            with st.container(border=True):
+                cl1, cl2 = st.columns([3, 1])
+                cl1.markdown(f"**{row['Category']}** \n<small>{row['Date']} | {row['Note']}</small>", unsafe_allow_html=True)
+                cl2.markdown(f"<div class='card-amount'>${row['Amount']:,.0f}</div>", unsafe_allow_html=True)
+
+# 刪除功能
+with st.sidebar.expander("🗑️ 刪除紀錄"):
+    if not df.empty:
+        target = st.selectbox("選擇刪除項", ["請選擇"] + [f"{i}: {r['Date']} - {r['Amount']}" for i, r in df.iterrows()])
+        if st.button("確認刪除") and target != "請選擇":
+            idx = int(target.split(":")[0])
+            raw = conn.read(worksheet="Expenses", ttl=0)
+            conn.update(worksheet="Expenses", data=raw.drop(idx))
+            st.rerun()
