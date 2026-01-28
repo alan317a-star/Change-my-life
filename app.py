@@ -9,7 +9,7 @@ import time
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
-# --- CSS 美化 (極簡文字版) ---
+# --- CSS 美化 (極簡文字版 + iPhone 黑字) ---
 st.markdown("""
     <style>
     /* 1. 輸入框設定 */
@@ -59,8 +59,8 @@ st.markdown("""
         transform: translate(-50%, -50%) !important;
         width: 90vw !important;
         max-width: 500px !important;
-        padding: 15px 25px !important; /* 調整內距讓文字更緊湊 */
-        border-radius: 50px !important; /* 改成膠囊狀，看起來更現代 */
+        padding: 15px 25px !important;
+        border-radius: 50px !important;
         background-color: #ffffff !important;
         box-shadow: 0 4px 30px rgba(0,0,0,0.3) !important;
         text-align: center !important;
@@ -203,7 +203,7 @@ with st.expander("😈 紅字小壞蛋，要花的值得！", expanded=True):
                     """
                     components.html(vibration_script, height=0, width=0)
                     
-                    # --- 修改點：移除圖示與星星，只留純文字 ---
+                    # 跳窗 (單行版)
                     st.toast("記帳的開始，就是成功的開始！")
                     st.success(f"✅ 已記錄：${amount_val}\n\n記帳的開始，就是成功的開始！")
                     
@@ -295,9 +295,14 @@ if not df.empty and len(df) > 0:
 else:
     st.info("尚無資料")
 
-# --- 7. 詳細列表 ---
+# --- 7. 詳細列表 (修改點：只顯示前 5 筆) ---
 st.write("---")
-with st.expander("📋 查看詳細紀錄列表", expanded=True):
+with st.expander("📋 查看詳細紀錄列表 (最近 5 筆)", expanded=True):
     if not df.empty:
+        # 先排序
         display_df = df[["Date", "Category", "Amount", "Note"]].sort_values("Date", ascending=False)
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        # 只取前 5 筆 (head(5))
+        st.dataframe(display_df.head(5), use_container_width=True, hide_index=True)
+        
+        # 顯示一個小提示
+        st.caption("👀 僅顯示最新的 5 筆資料，保持畫面簡潔。")
