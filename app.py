@@ -6,7 +6,8 @@ import plotly.express as px
 from datetime import date, datetime, timedelta
 import calendar
 import time
-import requests
+import google.generativeai as genai
+import json
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
@@ -15,7 +16,7 @@ st.set_page_config(page_title="Everyday Moments", layout="centered")
 st.markdown("""
     <style>
     /* 輸入框與文字設定 (iPhone 黑字優化) */
-    .stTextInput input, .stNumberInput input, .stDateInput input {
+    .stTextInput input, .stNumberInput input, .stDateInput input, .stTextArea textarea {
         font-size: 18px !important;
         background-color: #fff9c4 !important;
         color: #000000 !important;
@@ -91,7 +92,31 @@ st.markdown("""
 
 st.title("Everyday Moments")
 
-# --- 2. 建立連線 ---
+# --- AI 解析函數 ---
+def analyze_text_with_ai(text_input, categories_list, current_date):
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        today_str = current_date.strftime("%Y-%m-%d")
+        prompt = f"""你是一個專業的記帳助手。請根據使用者的描述分析消費內容，並回傳 JSON 格式。
+        - 今天日期：{today_str}
+        - 可選分類：{categories_list}
+        - 回傳格式：{{ "Date": "YYYY-MM-DD", "Category": "...", "Amount": int, "Note": "..." }}
+        - 規則：分類必須完全符合列表中的字串。若沒提到日期則設為今天。
+        使用者輸入："{text_input}" """
+        
+        response = model.generate_content(prompt)
+        clean_text = response.text.replace("```json", "").replace("```", "").strip()
+        return json.loads(clean_text)
+    except Exception as e:
+        st.error(f"AI 解析失敗：{e}")
+        return None
+
+# --- 2. 建立連線與設定 AI ---
+if "GOOGLE_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+else:
+    st.sidebar.warning("🔑 請在 Secrets 中設定 GOOGLE_API_KEY 以啟用 AI 功能")
+
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- 3. 讀取與處理資料 ---
@@ -112,7 +137,15 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- ⏳ 側邊欄 (已移除天氣功能) ---
+# --- 分類清單 ---
+all_categories = [
+    "🍔 飲食 (三餐/飲料)", "🛒 日用 (超市/藥妝)", "🚗 交通 (車票/加油)",
+    "🏠 居家 (房貸/水電)", "👗 服飾 (衣物/鞋包)", "💆‍♂️ 醫療 (看診/藥品)",
+    "🎮 娛樂 (旅遊/遊戲)", "📚 教育 (書籍/課程)", "💼 保險稅務",
+    "👶 子女 (尿布/學費)", "💸 其他"
+]
+
+# --- ⏳ 側邊欄 ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
     love_start = date(2019, 6, 15)
@@ -128,6 +161,23 @@ with st.sidebar:
         st.success("🎂 就是今天！寶寶誕生啦！")
     else:
         st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
+
+    # --- 🤖 AI 智慧記帳入口 ---
+    st.write("---")
+    st.header("🤖 AI 懶人記帳")
+    ai_text = st.text_area("對我說話：(例如：昨晚吃拉麵 260)", height=80, placeholder="輸入消費描述...")
+    
+    if st.button("✨ AI 解析並填表"):
+        if ai_text:
+            with st.spinner("AI 大腦正在分析..."):
+                result = analyze_text_with_ai(ai_text, all_categories, taiwan_date)
+                if result:
+                    st.session_state['ai_date'] = datetime.strptime(result['Date'], "%Y-%m-%d").date()
+                    st.session_state['ai_cat'] = result['Category']
+                    st.session_state['ai_amt'] = result['Amount']
+                    st.session_state['ai_note'] = result['Note']
+                    st.toast("✅ 解析完成！表單已更新")
+                    st.rerun()
 
     st.write("---")
     st.header("⚙️ 遊戲設定 (預算)")
@@ -177,20 +227,24 @@ tab1, tab2, tab3 = st.tabs(["📝 記帳", "📊 分析", "📋 列表"])
 # === 分頁 1: 記帳 ===
 with tab1:
     st.markdown("### 😈 每一筆錢都要花得值得！")
+    
+    # --- 讀取 AI 解析後的狀態 (如果有) ---
+    def_date = st.session_state.get('ai_date', taiwan_date)
+    def_cat = st.session_state.get('ai_cat', all_categories[0])
+    def_amt = st.session_state.get('ai_amt', 0)
+    def_note = st.session_state.get('ai_note', "")
+    
+    cat_idx = all_categories.index(def_cat) if def_cat in all_categories else 0
+
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
-            date_val = st.date_input("📅 日期", taiwan_date)
+            date_val = st.date_input("📅 日期", value=def_date)
         with col2:
-            cat_val = st.selectbox("📂 分類", [
-                "🍔 飲食 (三餐/飲料)", "🛒 日用 (超市/藥妝)", "🚗 交通 (車票/加油)",
-                "🏠 居家 (房貸/水電)", "👗 服飾 (衣物/鞋包)", "💆‍♂️ 醫療 (看診/藥品)",
-                "🎮 娛樂 (旅遊/遊戲)", "📚 教育 (書籍/課程)", "💼 保險稅務",
-                "👶 子女 (尿布/學費)", "💸 其他"
-            ])
+            cat_val = st.selectbox("📂 分類", all_categories, index=cat_idx)
             
-        amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
-        note_val = st.text_input("📝 備註 (詳細記錄謝謝❗)")
+        amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d", value=def_amt)
+        note_val = st.text_input("📝 備註 (詳細記錄謝謝❗)", value=def_note)
         
         st.markdown('<div class="save-btn">', unsafe_allow_html=True)
         submitted = st.form_submit_button("💾 確認儲存")
@@ -211,12 +265,14 @@ with tab1:
                     updated_df = pd.concat([raw_df, new_data], ignore_index=True)
                     conn.update(worksheet="Expenses", data=updated_df)
                     
-                    # 震動效果 (僅限部分手機瀏覽器)
-                    components.html("<script>window.navigator.vibrate([100,50,100]);</script>", height=0, width=0)
+                    # 成功後清除 AI 暫存
+                    for key in ['ai_date', 'ai_cat', 'ai_amt', 'ai_note']:
+                        if key in st.session_state: del st.session_state[key]
                     
-                    st.toast("  記帳開始，就是成功的開始！")
+                    components.html("<script>window.navigator.vibrate([100,50,100]);</script>", height=0, width=0)
+                    st.toast("✨ 記帳成功！")
                     st.success(f"✅ 已記錄：${amount_val}")
-                    time.sleep(1.2)
+                    time.sleep(1)
                     st.rerun()
                 except Exception as e:
                     st.error(f"寫入失敗：{e}")
@@ -270,6 +326,3 @@ with tab3:
                     st.caption(f"{row['Date']} | {row['Note']}")
                 with c2:
                     st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
-
-
-
