@@ -284,4 +284,5 @@ with tab3:
 
 # --- 底部署名 ---
 st.write("---")
-st.markdown('<div class="footer">作者 LunGo</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">作者 LunGo.</div>', unsafe_allow_html=True)
+
