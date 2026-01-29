@@ -147,7 +147,7 @@ with tab1:
                     new_row = pd.DataFrame([{"Date": f"{date_val} {taiwan_now.strftime('%H:%M:%S')}", "Category": cat_val, "Amount": amount_val, "Note": note_val}])
                     raw_df = conn.read(worksheet="Expenses", ttl=0)
                     conn.update(worksheet="Expenses", data=pd.concat([raw_df, new_row], ignore_index=True))
-                    st.toast("✨ 記帳成功！")
+                    st.toast("✨ 記帳完成！成功的開始")
                     time.sleep(1)
                     st.rerun()
                 except Exception as e: st.error(f"錯誤：{e}")
@@ -200,3 +200,4 @@ with tab3:
                             time.sleep(1); st.rerun()
                         except Exception as e: st.error(f"失敗：{e}")
     else: st.info("尚無資料")
+
