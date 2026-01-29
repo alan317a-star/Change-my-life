@@ -158,7 +158,7 @@ with st.sidebar:
 
     st.write("---")
     
-    # === 升級版：錢包狀態 (含上月比較) ===
+    # === 錢包狀態 (含上月比較) ===
     st.header("💰 錢包狀態")
     monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
     
@@ -166,7 +166,7 @@ with st.sidebar:
     diff = current_spent - last_month_spent
     delta_label = f"比上月{'多' if diff > 0 else '少'}花 ${abs(diff):,.0f}"
     
-    # 顯示指標 (inverse 代表：花越少越好，所以數字變大顯示紅色，變小顯示綠色)
+    # 顯示指標
     st.metric(
         label="💸 本月已花費", 
         value=f"${current_spent:,.0f}", 
@@ -175,25 +175,6 @@ with st.sidebar:
     )
     st.caption(f"📅 上月同期花費：${last_month_spent:,.0f}")
     
-    # === 新增：夢想存錢筒 ===
-    st.write("---")
-    st.subheader("🎯 夢想存錢筒")
-    # 這裡假設每個月預算沒花完的錢，都存起來
-    # 簡單邏輯：本月剩餘 = 存下的錢
-    remaining_now = monthly_budget - current_spent
-    savings_goal = 50000 # 假設目標 5萬 (例如旅遊)
-    
-    # 為了展示效果，這裡用「本月剩餘預算」當作「潛在存款」
-    potential_savings = max(0, remaining_now)
-    
-    st.write(f"✈️ 目標：日本旅遊基金 (${potential_savings:,.0f} / $50,000)")
-    progress_val = min(potential_savings / savings_goal, 1.0)
-    st.progress(progress_val)
-    if progress_val >= 1.0:
-        st.success("🎉 恭喜！目標達成！")
-    else:
-        st.caption("加油！守住預算就是存錢！")
-
 # --- 🛡️ 錢包防禦戰 ---
 percent = current_spent / monthly_budget if monthly_budget > 0 else 0
 remaining = monthly_budget - current_spent
