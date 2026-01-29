@@ -6,6 +6,7 @@ import plotly.express as px
 from datetime import date, datetime, timedelta
 import calendar
 import time
+import random  # 新增：用於隨機選取
 
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
@@ -65,10 +66,40 @@ st.markdown("""
     
     .card-title { font-size: 18px; font-weight: bold; color: #333; }
     .card-amount { font-size: 20px; font-weight: bold; color: #FF4B4B; text-align: right; }
+    
+    /* 金句樣式 */
+    .quote-box {
+        background-color: #f0f2f6;
+        border-left: 5px solid #FF4B4B;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+        font-style: italic;
+        color: #555;
+        text-align: center;
+        font-size: 16px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("Everyday Moments")
+
+# --- 新增：隨機勉勵短語 ---
+quotes = [
+    "🌱 每一筆省下的錢，都是未來的自由。",
+    "💪 記帳不是為了省錢，而是為了更聰明地花錢。",
+    "✨ 今天的自律，是為了明天的選擇權。",
+    "🧱 財富是像堆積木一樣，一點一點累積起來的。",
+    "🌟 你不理財，財不理你；用心生活，歲月靜好。",
+    "🎯 透過記帳，看見真實的自己。",
+    "🌈 能夠控制慾望的人，才能掌控人生。",
+    "🌻 每一塊錢都有它的使命，別讓它白白流失。",
+    "🚀 投資自己，是報酬率最高的投資。",
+    "❤️ 簡單生活，富足心靈。"
+]
+selected_quote = random.choice(quotes)
+st.markdown(f'<div class="quote-box">{selected_quote}</div>', unsafe_allow_html=True)
+
 
 # --- 2. 建立連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -90,7 +121,7 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- 提前計算花費 (為了讓側邊欄能顯示) ---
+# --- 提前計算花費 ---
 if not df.empty:
     current_spent = df[df["Month"] == current_month_str]["Amount"].sum()
     total_all_time = df["Amount"].sum()
@@ -111,17 +142,13 @@ with st.sidebar:
 
     st.write("---")
     
-    # === 新增：側邊欄花費統計 ===
+    # 側邊欄花費統計
     st.header("💰 錢包狀態")
     monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
-    
-    # 顯示本月已花費 (使用 metric 組件，比較顯眼)
     st.metric(label="💸 本月已花費", value=f"${current_spent:,.0f}", delta="累積中...")
-    
-    # 顯示歷史總花費 (用小字顯示)
     st.caption(f"📊 歷史總花費：${total_all_time:,.0f}")
 
-# --- 🛡️ 錢包防禦戰 (含勇者稱號) ---
+# --- 🛡️ 錢包防禦戰 ---
 percent = current_spent / monthly_budget if monthly_budget > 0 else 0
 remaining = monthly_budget - current_spent
 _, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
