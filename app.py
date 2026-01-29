@@ -64,8 +64,24 @@ st.markdown("""
     }
     div[data-testid="stToast"] * { color: #000000 !important; font-size: 20px !important; font-weight: bold !important; }
     
-    .card-title { font-size: 18px; font-weight: bold; color: #333; }
-    .card-amount { font-size: 20px; font-weight: bold; color: #FF4B4B; text-align: right; }
+    /* === 修改重點：卡片列表樣式 === */
+    .card-title { 
+        font-size: 20px; 
+        font-weight: bold; 
+        color: #2196F3 !important; /* 改成亮藍色，在黑底或白底都很明顯 */
+        margin-bottom: 3px;
+    }
+    .card-note {
+        font-size: 15px;
+        color: inherit; /* 跟隨系統：黑底時變白字，白底時變黑字 */
+        opacity: 0.9;   /* 稍微帶一點點透明感，區分標題，但保持高對比 */
+    }
+    .card-amount { 
+        font-size: 22px; 
+        font-weight: bold; 
+        color: #FF4B4B; 
+        text-align: right; 
+    }
     
     /* 金句樣式 */
     .quote-box {
@@ -258,7 +274,7 @@ with tab2:
             st.plotly_chart(fig, use_container_width=True)
     else: st.info("尚無資料")
 
-# === Tab 3: 列表 ===
+# === Tab 3: 列表 (樣式優化版) ===
 with tab3:
     st.subheader("📋 最近紀錄 (點擊 🗑️ 刪除)")
     if not df.empty:
@@ -269,9 +285,12 @@ with tab3:
             with st.container(border=True):
                 c1, c2, c3 = st.columns([3, 1.5, 0.8])
                 with c1:
+                    # 分類：使用新的亮藍色，黑底白底都清楚
                     st.markdown(f'<div class="card-title">{row["Category"]}</div>', unsafe_allow_html=True)
-                    st.caption(f"{row['Date']} | {row['Note']}")
-                with c2: st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
+                    # 備註：改用 card-note 樣式，自動適應黑/白背景
+                    st.markdown(f'<div class="card-note">{row["Date"]} | {row["Note"]}</div>', unsafe_allow_html=True)
+                with c2: 
+                    st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
                 with c3:
                     if st.button("🗑️", key=f"del_{row['orig_idx']}"):
                         try:
@@ -285,4 +304,3 @@ with tab3:
 # --- 底部署名 ---
 st.write("---")
 st.markdown('<div class="footer">作者 LunGo.</div>', unsafe_allow_html=True)
-
