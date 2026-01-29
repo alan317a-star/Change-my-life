@@ -176,7 +176,7 @@ _, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
 days_left = last_day - taiwan_date.day + 1
 daily_budget = remaining / days_left if days_left > 0 else 0
 
-st.subheader("🛡️ 錢包防禦戰 (本月)")
+st.subheader("🛡️ 錢包防禦戰")
 c_b1, c_b2, c_b3 = st.columns([2, 1, 1])
 
 with c_b1:
@@ -271,3 +271,4 @@ with tab3:
 # --- 底部署名 ---
 st.write("---")
 st.markdown('<div class="footer">作者 LunGo.</div>', unsafe_allow_html=True)
+
