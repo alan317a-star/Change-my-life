@@ -104,7 +104,7 @@ with st.sidebar:
     st.write("---")
     monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
 
-# --- 錢包防禦戰 ---
+# --- 🛡️ 錢包防禦戰 (含新版稱號系統) ---
 if not df.empty:
     current_spent = df[df["Month"] == current_month_str]["Amount"].sum()
 else:
@@ -118,9 +118,23 @@ daily_budget = remaining / days_left if days_left > 0 else 0
 
 st.subheader("🛡️ 錢包防禦戰")
 c_b1, c_b2, c_b3 = st.columns([2, 1, 1])
+
 with c_b1:
-    st.markdown(f'<div class="game-status">{"🟢 狀態良好" if percent < 0.5 else "🟡 受傷中" if percent < 0.8 else "🔴 告急"}</div>', unsafe_allow_html=True)
+    # === 新增：勇者稱號邏輯 ===
+    if percent < 0.3:
+        status_text = "🏆 黃金理財大師 (狀態絕佳)"
+    elif percent < 0.6:
+        status_text = "🛡️ 白銀防禦騎士 (穩健前行)"
+    elif percent < 0.9:
+        status_text = "⚔️ 青銅奮戰勇者 (遭遇苦戰)"
+    elif percent < 1.0:
+        status_text = "🔴 紅色警戒兵 (瀕臨極限)"
+    else:
+        status_text = "☠️ 骷髏錢包 (任務失敗)"
+        
+    st.markdown(f'<div class="game-status">{status_text}</div>', unsafe_allow_html=True)
     st.progress(min(percent, 1.0))
+
 with c_b2: st.metric("剩餘血量", f"${remaining:,.0f}")
 with c_b3: st.metric("📅 今日可用", f"${daily_budget:,.0f}")
 
@@ -152,7 +166,7 @@ with tab1:
                     st.rerun()
                 except Exception as e: st.error(f"錯誤：{e}")
 
-    # 新增：原本的快速復原按鈕
+    # 原本的快速復原按鈕
     with st.expander("記錯帳按這邊 (快速復原)", expanded=False):
         st.markdown('<div class="del-btn">', unsafe_allow_html=True)
         if st.button("↩️ 刪除最後一筆紀錄 (Undo)"):
@@ -200,4 +214,3 @@ with tab3:
                             time.sleep(1); st.rerun()
                         except Exception as e: st.error(f"失敗：{e}")
     else: st.info("尚無資料")
-
