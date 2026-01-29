@@ -13,7 +13,7 @@ st.set_page_config(page_title="Everyday Moments", layout="centered")
 # --- CSS 美化 ---
 st.markdown("""
     <style>
-    /* 輸入框與文字設定 (iPhone 黑字優化) */
+    /* 輸入框與文字設定 */
     .stTextInput input, .stNumberInput input, .stDateInput input {
         font-size: 18px !important;
         background-color: #fff9c4 !important;
@@ -90,6 +90,14 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
+# --- 提前計算花費 (為了讓側邊欄能顯示) ---
+if not df.empty:
+    current_spent = df[df["Month"] == current_month_str]["Amount"].sum()
+    total_all_time = df["Amount"].sum()
+else:
+    current_spent = 0
+    total_all_time = 0
+
 # --- 側邊欄 ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
@@ -102,14 +110,18 @@ with st.sidebar:
     else: st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
 
     st.write("---")
+    
+    # === 新增：側邊欄花費統計 ===
+    st.header("💰 錢包狀態")
     monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
+    
+    # 顯示本月已花費 (使用 metric 組件，比較顯眼)
+    st.metric(label="💸 本月已花費", value=f"${current_spent:,.0f}", delta="累積中...")
+    
+    # 顯示歷史總花費 (用小字顯示)
+    st.caption(f"📊 歷史總花費：${total_all_time:,.0f}")
 
-# --- 🛡️ 錢包防禦戰 (含新版稱號系統) ---
-if not df.empty:
-    current_spent = df[df["Month"] == current_month_str]["Amount"].sum()
-else:
-    current_spent = 0
-
+# --- 🛡️ 錢包防禦戰 (含勇者稱號) ---
 percent = current_spent / monthly_budget if monthly_budget > 0 else 0
 remaining = monthly_budget - current_spent
 _, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
@@ -120,17 +132,11 @@ st.subheader("🛡️ 錢包防禦戰")
 c_b1, c_b2, c_b3 = st.columns([2, 1, 1])
 
 with c_b1:
-    # === 新增：勇者稱號邏輯 ===
-    if percent < 0.3:
-        status_text = "🏆 黃金理財大師 (狀態絕佳)"
-    elif percent < 0.6:
-        status_text = "🛡️ 白銀防禦騎士 (穩健前行)"
-    elif percent < 0.9:
-        status_text = "⚔️ 青銅奮戰勇者 (遭遇苦戰)"
-    elif percent < 1.0:
-        status_text = "🔴 紅色警戒兵 (瀕臨極限)"
-    else:
-        status_text = "☠️ 骷髏錢包 (任務失敗)"
+    if percent < 0.3: status_text = "🏆 黃金理財大師 (狀態絕佳)"
+    elif percent < 0.6: status_text = "🛡️ 白銀防禦騎士 (穩健前行)"
+    elif percent < 0.9: status_text = "⚔️ 青銅奮戰勇者 (遭遇苦戰)"
+    elif percent < 1.0: status_text = "🔴 紅色警戒兵 (瀕臨極限)"
+    else: status_text = "☠️ 骷髏錢包 (任務失敗)"
         
     st.markdown(f'<div class="game-status">{status_text}</div>', unsafe_allow_html=True)
     st.progress(min(percent, 1.0))
@@ -142,7 +148,7 @@ st.write("---")
 
 tab1, tab2, tab3 = st.tabs(["📝 記帳", "📊 分析", "📋 列表"])
 
-# === Tab 1: 記帳 (含刪除最後一筆) ===
+# === Tab 1: 記帳 ===
 with tab1:
     st.markdown("### 😈 每一筆錢都要花得值得！")
     with st.form("entry_form", clear_on_submit=True):
@@ -162,11 +168,9 @@ with tab1:
                     raw_df = conn.read(worksheet="Expenses", ttl=0)
                     conn.update(worksheet="Expenses", data=pd.concat([raw_df, new_row], ignore_index=True))
                     st.toast("✨ 記帳完成！成功的開始")
-                    time.sleep(1)
-                    st.rerun()
+                    time.sleep(1); st.rerun()
                 except Exception as e: st.error(f"錯誤：{e}")
 
-    # 原本的快速復原按鈕
     with st.expander("記錯帳按這邊 (快速復原)", expanded=False):
         st.markdown('<div class="del-btn">', unsafe_allow_html=True)
         if st.button("↩️ 刪除最後一筆紀錄 (Undo)"):
@@ -175,8 +179,7 @@ with tab1:
                 if not raw_df.empty:
                     conn.update(worksheet="Expenses", data=raw_df.iloc[:-1])
                     st.toast("已刪除最後一筆紀錄")
-                    time.sleep(1)
-                    st.rerun()
+                    time.sleep(1); st.rerun()
             except Exception as e: st.error(f"刪除失敗: {e}")
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -191,7 +194,7 @@ with tab2:
             st.plotly_chart(fig, use_container_width=True)
     else: st.info("尚無資料")
 
-# === Tab 3: 列表 (含卡片點擊刪除) ===
+# === Tab 3: 列表 ===
 with tab3:
     st.subheader("📋 最近紀錄 (點擊 🗑️ 刪除)")
     if not df.empty:
