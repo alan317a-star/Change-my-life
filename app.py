@@ -97,7 +97,7 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- 計算花費邏輯 (固定計算「本月」與「上月」，用於側邊欄提醒) ---
+# --- 計算花費邏輯 (用於側邊欄比較箭頭) ---
 current_spent = 0
 last_month_spent = 0
 
@@ -124,11 +124,11 @@ with st.sidebar:
 
     st.write("---")
     
-    # === 區塊 1: 錢包狀態 (即時監控：本月 vs 上月) ===
+    # === 錢包狀態 (整合版) ===
     st.header("💰 錢包狀態")
     monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
 
-    # 計算差額 (這是您最想要的功能)
+    # 計算差額 (紅綠箭頭提醒)
     diff = current_spent - last_month_spent
     delta_label = f"比上月{'多' if diff > 0 else '少'}花 ${abs(diff):,.0f}"
 
@@ -138,32 +138,32 @@ with st.sidebar:
         delta=delta_label,
         delta_color="inverse" 
     )
-    st.caption(f"📅 上月同期花費：${last_month_spent:,.0f}")
     
-    st.write("---")
-    
-    # === 區塊 2: 帳務查詢 (查歷史紀錄) ===
-    st.header("📜 歷史帳務")
+    # === 這裡就是修改的地方 ===
+    # 移除了原本的 st.caption("上月同期花費...")
+    # 改成下拉式選單查詢
+    st.write("") # 空一行排版
+    st.markdown("##### 📜 歷史帳務查詢")
     
     if not df.empty:
+        # 選項：預設第一個是「歷史總花費」，後面跟著月份
         month_options = ["🏆 歷史總花費"] + sorted(df["Month"].dropna().unique().tolist(), reverse=True)
-    else:
-        month_options = ["🏆 歷史總花費"]
-
-    selected_period = st.selectbox("📅 查詢區間", month_options)
-    
-    if not df.empty:
-        if selected_period == "🏆 歷史總花費":
-            display_amount = df["Amount"].sum()
-            display_label = "累積總支出"
+        
+        # 下拉選單 (label_visibility="collapsed" 讓選單更緊湊)
+        selected_query = st.selectbox("選擇月份", month_options, label_visibility="collapsed")
+        
+        # 根據選擇計算金額
+        if selected_query == "🏆 歷史總花費":
+            query_amount = df["Amount"].sum()
+            query_label = "累積總支出"
         else:
-            display_amount = df[df["Month"] == selected_period]["Amount"].sum()
-            display_label = f"{selected_period} 總支出"
+            query_amount = df[df["Month"] == selected_query]["Amount"].sum()
+            query_label = f"{selected_query} 總支出"
+            
+        # 顯示查詢結果 (用 info 藍色框框顯示，清楚明瞭)
+        st.info(f"{query_label}: **${query_amount:,.0f}**")
     else:
-        display_amount = 0
-        display_label = "累積總支出"
-
-    st.info(f"**{display_label}**\n# ${display_amount:,.0f}")
+        st.caption("尚無歷史資料")
 
     
 # --- 🛡️ 錢包防禦戰 (鎖定當月) ---
