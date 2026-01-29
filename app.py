@@ -79,6 +79,16 @@ st.markdown("""
         text-align: center;
         font-size: 16px;
     }
+    
+    /* 底部作者署名樣式 */
+    .footer {
+        text-align: center;
+        font-size: 14px;
+        color: #aaaaaa;
+        margin-top: 50px;
+        margin-bottom: 20px;
+        font-family: sans-serif;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -271,3 +281,7 @@ with tab3:
                             time.sleep(1); st.rerun()
                         except Exception as e: st.error(f"失敗：{e}")
     else: st.info("尚無資料")
+
+# --- 底部署名 ---
+st.write("---")
+st.markdown('<div class="footer">作者 LunGo</div>', unsafe_allow_html=True)
