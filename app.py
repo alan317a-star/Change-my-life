@@ -84,42 +84,26 @@ st.markdown("""
 
 st.title("Everyday Moments")
 
-# --- 隨機勉勵短語 (擴充至30句) ---
+# --- 隨機勉勵短語 (30句) ---
 quotes = [
-    "🌱 每一筆省下的錢，都是未來的自由。",
-    "💪 記帳不是為了省錢，而是為了更聰明地花錢。",
-    "✨ 今天的自律，是為了明天的選擇權。",
-    "🧱 財富是像堆積木一樣，一點一點累積起來的。",
-    "🌟 你不理財，財不理你；用心生活，歲月靜好。",
-    "🎯 透過記帳，看見真實的自己。",
-    "🌈 能夠控制慾望的人，才能掌控人生。",
-    "🌻 每一塊錢都有它的使命，別讓它白白流失。",
-    "🚀 投資自己，是報酬率最高的投資。",
-    "❤️ 簡單生活，富足心靈。",
-    "💧 涓涓細流，終成大海；小錢不省，大錢難留。",
-    "🛑 想要不等於需要，下單前多想三秒鐘。",
-    "📅 記帳是給未來的自己一封情書。",
-    "⚖️ 理財就是理生活，平衡才是王道。",
-    "🗝️ 財富不是人生的目的，而是實現夢想的工具。",
-    "🦁 省錢不需要像苦行僧，只需要像獵人一樣精準。",
-    "⏳ 時間就是金錢，善用每一分資源。",
-    "🛡️ 建立緊急預備金，是給生活穿上防彈衣。",
-    "👣 千里之行，始於足下；百萬資產，始於記帳。",
-    "🚫 遠離精緻窮，擁抱踏實富。",
-    "💎 真正的富有，是擁有支配時間的權利。",
-    "🧘‍♀️ 心若富足，生活處處是寶藏。",
-    "📈 每天進步 1%，一年後你會感謝現在的自己。",
-    "🌤️ 存錢不是為了過苦日子，而是為了迎接好日子。",
-    "🔍 記帳不只是紀錄數字，更是檢視生活軌跡。",
-    "🎁 最好的禮物，是一個無後顧之憂的未來。",
-    "🚦 克制一時的衝動，換來長久的安穩。",
-    "🧠 投資大腦，永遠不會虧損。",
-    "🕊️ 財務自由的第一步，從了解你的現金流開始。",
-    "🏡 家的溫暖，建立在安穩的經濟基礎之上。"
+    "🌱 每一筆省下的錢，都是未來的自由。", "💪 記帳不是為了省錢，而是為了更聰明地花錢。",
+    "✨ 今天的自律，是為了明天的選擇權。", "🧱 財富是像堆積木一樣，一點一點累積起來的。",
+    "🌟 你不理財，財不理你；用心生活，歲月靜好。", "🎯 透過記帳，看見真實的自己。",
+    "🌈 能夠控制慾望的人，才能掌控人生。", "🌻 每一塊錢都有它的使命，別讓它白白流失。",
+    "🚀 投資自己，是報酬率最高的投資。", "❤️ 簡單生活，富足心靈。",
+    "💧 涓涓細流，終成大海；小錢不省，大錢難留。", "🛑 想要不等於需要，下單前多想三秒鐘。",
+    "📅 記帳是給未來的自己一封情書。", "⚖️ 理財就是理生活，平衡才是王道。",
+    "🗝️ 財富不是人生的目的，而是實現夢想的工具。", "🦁 省錢不需要像苦行僧，只需要像獵人一樣精準。",
+    "⏳ 時間就是金錢，善用每一分資源。", "🛡️ 建立緊急預備金，是給生活穿上防彈衣。",
+    "👣 千里之行，始於足下；百萬資產，始於記帳。", "🚫 遠離精緻窮，擁抱踏實富。",
+    "💎 真正的富有，是擁有支配時間的權利。", "🧘‍♀️ 心若富足，生活處處是寶藏。",
+    "📈 每天進步 1%，一年後你會感謝現在的自己。", "🌤️ 存錢不是為了過苦日子，而是為了迎接好日子。",
+    "🔍 記帳不只是紀錄數字，更是檢視生活軌跡。", "🎁 最好的禮物，是一個無後顧之憂的未來。",
+    "🚦 克制一時的衝動，換來長久的安穩。", "🧠 投資大腦，永遠不會虧損。",
+    "🕊️ 財務自由的第一步，從了解你的現金流開始。", "🏡 家的溫暖，建立在安穩的經濟基礎之上。"
 ]
 selected_quote = random.choice(quotes)
 st.markdown(f'<div class="quote-box">{selected_quote}</div>', unsafe_allow_html=True)
-
 
 # --- 2. 建立連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -141,13 +125,25 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- 提前計算花費 ---
+# --- 計算花費邏輯 (本月 & 上月比較) ---
+current_spent = 0
+last_month_spent = 0
+total_all_time = 0
+
 if not df.empty:
+    # 本月花費
     current_spent = df[df["Month"] == current_month_str]["Amount"].sum()
+    
+    # 歷史總花費
     total_all_time = df["Amount"].sum()
-else:
-    current_spent = 0
-    total_all_time = 0
+    
+    # 計算上個月的月份字串
+    first_day_current = taiwan_date.replace(day=1)
+    last_month_end = first_day_current - timedelta(days=1)
+    last_month_str = last_month_end.strftime("%Y-%m")
+    
+    # 上月花費
+    last_month_spent = df[df["Month"] == last_month_str]["Amount"].sum()
 
 # --- 側邊欄 ---
 with st.sidebar:
@@ -162,11 +158,41 @@ with st.sidebar:
 
     st.write("---")
     
-    # 側邊欄花費統計
+    # === 升級版：錢包狀態 (含上月比較) ===
     st.header("💰 錢包狀態")
     monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
-    st.metric(label="💸 本月已花費", value=f"${current_spent:,.0f}", delta="累積中...")
-    st.caption(f"📊 歷史總花費：${total_all_time:,.0f}")
+    
+    # 計算與上個月的差額
+    diff = current_spent - last_month_spent
+    delta_label = f"比上月{'多' if diff > 0 else '少'}花 ${abs(diff):,.0f}"
+    
+    # 顯示指標 (inverse 代表：花越少越好，所以數字變大顯示紅色，變小顯示綠色)
+    st.metric(
+        label="💸 本月已花費", 
+        value=f"${current_spent:,.0f}", 
+        delta=delta_label,
+        delta_color="inverse" 
+    )
+    st.caption(f"📅 上月同期花費：${last_month_spent:,.0f}")
+    
+    # === 新增：夢想存錢筒 ===
+    st.write("---")
+    st.subheader("🎯 夢想存錢筒")
+    # 這裡假設每個月預算沒花完的錢，都存起來
+    # 簡單邏輯：本月剩餘 = 存下的錢
+    remaining_now = monthly_budget - current_spent
+    savings_goal = 50000 # 假設目標 5萬 (例如旅遊)
+    
+    # 為了展示效果，這裡用「本月剩餘預算」當作「潛在存款」
+    potential_savings = max(0, remaining_now)
+    
+    st.write(f"✈️ 目標：日本旅遊基金 (${potential_savings:,.0f} / $50,000)")
+    progress_val = min(potential_savings / savings_goal, 1.0)
+    st.progress(progress_val)
+    if progress_val >= 1.0:
+        st.success("🎉 恭喜！目標達成！")
+    else:
+        st.caption("加油！守住預算就是存錢！")
 
 # --- 🛡️ 錢包防禦戰 ---
 percent = current_spent / monthly_budget if monthly_budget > 0 else 0
