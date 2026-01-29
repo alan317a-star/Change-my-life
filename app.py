@@ -41,92 +41,37 @@ st.markdown("""
     .save-btn > button:hover { background-color: #E03A3A; color: white; }
     .del-btn > button { background-color: #6c757d; color: white; }
     .del-btn > button:hover { background-color: #5a6268; color: white; }
+    .stButton > button[kind="secondary"] { height: 100% !important; margin-top: 0px !important; font-size: 16px !important; background-color: #f8f9fa !important; border: 1px solid #ddd !important; color: #666 !important; }
     
-    /* 列表垃圾桶小按鈕 */
-    .stButton > button[kind="secondary"] {
-        height: 100% !important;
-        margin-top: 0px !important;
-        font-size: 16px !important;
-        background-color: #f8f9fa !important;
-        border: 1px solid #ddd !important;
-        color: #666 !important;
-    }
-
     .game-status { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
-
-    /* Toast 樣式 */
-    div[data-testid="stToast"] {
-        position: fixed !important; top: 50% !important; left: 50% !important;
-        transform: translate(-50%, -50%) !important; width: 90vw !important;
-        max-width: 500px !important; border-radius: 50px !important;
-        background-color: #ffffff !important; box-shadow: 0 4px 30px rgba(0,0,0,0.3) !important;
-        text-align: center !important; z-index: 999999 !important; border: 2px solid #FF4B4B !important;
-    }
+    div[data-testid="stToast"] { position: fixed !important; top: 50% !important; left: 50% !important; transform: translate(-50%, -50%) !important; width: 90vw !important; max-width: 500px !important; border-radius: 50px !important; background-color: #ffffff !important; box-shadow: 0 4px 30px rgba(0,0,0,0.3) !important; text-align: center !important; z-index: 999999 !important; border: 2px solid #FF4B4B !important; }
     div[data-testid="stToast"] * { color: #000000 !important; font-size: 20px !important; font-weight: bold !important; }
     
-    /* === 修改重點：卡片列表樣式 === */
-    .card-title { 
-        font-size: 20px; 
-        font-weight: bold; 
-        color: #2196F3 !important; /* 改成亮藍色，在黑底或白底都很明顯 */
-        margin-bottom: 3px;
-    }
-    .card-note {
-        font-size: 15px;
-        color: inherit; /* 跟隨系統：黑底時變白字，白底時變黑字 */
-        opacity: 0.9;   /* 稍微帶一點點透明感，區分標題，但保持高對比 */
-    }
-    .card-amount { 
-        font-size: 22px; 
-        font-weight: bold; 
-        color: #FF4B4B; 
-        text-align: right; 
-    }
+    /* 卡片樣式 */
+    .card-title { font-size: 20px; font-weight: bold; color: #2196F3 !important; margin-bottom: 3px; }
+    .card-note { font-size: 15px; color: inherit; opacity: 0.9; }
+    .card-amount { font-size: 22px; font-weight: bold; color: #FF4B4B; text-align: right; }
     
     /* 金句樣式 */
-    .quote-box {
-        background-color: #f0f2f6;
-        border-left: 5px solid #FF4B4B;
-        padding: 15px;
-        margin-bottom: 20px;
-        border-radius: 5px;
-        font-style: italic;
-        color: #555;
-        text-align: center;
-        font-size: 16px;
-    }
-    
-    /* 底部作者署名樣式 */
-    .footer {
-        text-align: center;
-        font-size: 14px;
-        color: #aaaaaa;
-        margin-top: 50px;
-        margin-bottom: 20px;
-        font-family: sans-serif;
-    }
+    .quote-box { background-color: #f0f2f6; border-left: 5px solid #FF4B4B; padding: 15px; margin-bottom: 20px; border-radius: 5px; font-style: italic; color: #555; text-align: center; font-size: 16px; }
+    .footer { text-align: center; font-size: 14px; color: #aaaaaa; margin-top: 50px; margin-bottom: 20px; font-family: sans-serif; }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("Everyday Moments")
 
-# --- 隨機勉勵短語 (30句) ---
+# --- 隨機勉勵短語 ---
 quotes = [
-    "🌱 每一筆省下的錢，都是未來的自由。", "💪 記帳不是為了省錢，而是為了更聰明地花錢。",
-    "✨ 今天的自律，是為了明天的選擇權。", "🧱 財富是像堆積木一樣，一點一點累積起來的。",
-    "🌟 你不理財，財不理你；用心生活，歲月靜好。", "🎯 透過記帳，看見真實的自己。",
-    "🌈 能夠控制慾望的人，才能掌控人生。", "🌻 每一塊錢都有它的使命，別讓它白白流失。",
-    "🚀 投資自己，是報酬率最高的投資。", "❤️ 簡單生活，富足心靈。",
-    "💧 涓涓細流，終成大海；小錢不省，大錢難留。", "🛑 想要不等於需要，下單前多想三秒鐘。",
-    "📅 記帳是給未來的自己一封情書。", "⚖️ 理財就是理生活，平衡才是王道。",
-    "🗝️ 財富不是人生的目的，而是實現夢想的工具。", "🦁 省錢不需要像苦行僧，只需要像獵人一樣精準。",
-    "⏳ 時間就是金錢，善用每一分資源。", "🛡️ 建立緊急預備金，是給生活穿上防彈衣。",
-    "👣 千里之行，始於足下；百萬資產，始於記帳。", "🚫 遠離精緻窮，擁抱踏實富。",
-    "💎 真正的富有，是擁有支配時間的權利。", "🧘‍♀️ 心若富足，生活處處是寶藏。",
-    "📈 每天進步 1%，一年後你會感謝現在的自己。", "🌤️ 存錢不是為了過苦日子，而是為了迎接好日子。",
-    "🔍 記帳不只是紀錄數字，更是檢視生活軌跡。", "🎁 最好的禮物，是一個無後顧之憂的未來。",
-    "🚦 克制一時的衝動，換來長久的安穩。", "🧠 投資大腦，永遠不會虧損。",
-    "🕊️ 財務自由的第一步，從了解你的現金流開始。", "🏡 家的溫暖，建立在安穩的經濟基礎之上。"
+    "🌱 每一筆省下的錢，都是未來的自由。", "💪 記帳不是為了省錢，而是為了更聰明地花錢。", "✨ 今天的自律，是為了明天的選擇權。",
+    "🧱 財富是像堆積木一樣，一點一點累積起來的。", "🌟 你不理財，財不理你；用心生活，歲月靜好。", "🎯 透過記帳，看見真實的自己。",
+    "🌈 能夠控制慾望的人，才能掌控人生。", "🌻 每一塊錢都有它的使命，別讓它白白流失。", "🚀 投資自己，是報酬率最高的投資。",
+    "❤️ 簡單生活，富足心靈。", "💧 涓涓細流，終成大海；小錢不省，大錢難留。", "🛑 想要不等於需要，下單前多想三秒鐘。",
+    "📅 記帳是給未來的自己一封情書。", "⚖️ 理財就是理生活，平衡才是王道。", "🗝️ 財富不是人生的目的，而是實現夢想的工具。",
+    "🦁 省錢不需要像苦行僧，只需要像獵人一樣精準。", "⏳ 時間就是金錢，善用每一分資源。", "🛡️ 建立緊急預備金，是給生活穿上防彈衣。",
+    "👣 千里之行，始於足下；百萬資產，始於記帳。", "🚫 遠離精緻窮，擁抱踏實富。", "💎 真正的富有，是擁有支配時間的權利。",
+    "🧘‍♀️ 心若富足，生活處處是寶藏。", "📈 每天進步 1%，一年後你會感謝現在的自己。", "🌤️ 存錢不是為了過苦日子，而是為了迎接好日子。",
+    "🔍 記帳不只是紀錄數字，更是檢視生活軌跡。", "🎁 最好的禮物，是一個無後顧之憂的未來。", "🚦 克制一時的衝動，換來長久的安穩。",
+    "🧠 投資大腦，永遠不會虧損。", "🕊️ 財務自由的第一步，從了解你的現金流開始。", "🏡 家的溫暖，建立在安穩的經濟基礎之上。"
 ]
 selected_quote = random.choice(quotes)
 st.markdown(f'<div class="quote-box">{selected_quote}</div>', unsafe_allow_html=True)
@@ -134,9 +79,9 @@ st.markdown(f'<div class="quote-box">{selected_quote}</div>', unsafe_allow_html=
 # --- 2. 建立連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 3. 讀取資料 ---
+# --- 3. 讀取資料 (加上錯誤處理) ---
 try:
-    df = conn.read(worksheet="Expenses", ttl=0)
+    df = conn.read(worksheet="Expenses", ttl=5)
     if df.empty:
         df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     else:
@@ -145,31 +90,18 @@ try:
         df["Month"] = df["Date_dt"].dt.strftime("%Y-%m")
         df["Note"] = df["Note"].fillna("")
 except Exception:
+    # 如果讀取失敗 (例如 Quota exceeded)，建立空表格防止當機
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
+    st.toast("⚠️ 連線忙碌中，請稍後再試")
 
 taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- 計算花費邏輯 (本月 & 上月比較) ---
-current_spent = 0
-last_month_spent = 0
-total_all_time = 0
-
+# --- 計算當前月份花費 (給血量條使用，固定鎖定當月) ---
+current_month_spent_for_game = 0
 if not df.empty:
-    # 本月花費
-    current_spent = df[df["Month"] == current_month_str]["Amount"].sum()
-    
-    # 歷史總花費
-    total_all_time = df["Amount"].sum()
-    
-    # 計算上個月的月份字串
-    first_day_current = taiwan_date.replace(day=1)
-    last_month_end = first_day_current - timedelta(days=1)
-    last_month_str = last_month_end.strftime("%Y-%m")
-    
-    # 上月花費
-    last_month_spent = df[df["Month"] == last_month_str]["Amount"].sum()
+    current_month_spent_for_game = df[df["Month"] == current_month_str]["Amount"].sum()
 
 # --- 側邊欄 ---
 with st.sidebar:
@@ -184,31 +116,47 @@ with st.sidebar:
 
     st.write("---")
     
-    # === 錢包狀態 (含上月比較) ===
-    st.header("💰 錢包狀態")
+    # === 新功能：歷史花費查詢 ===
+    st.header("💰 帳務查詢")
+    
+    # 準備選項：歷史總花費 + 所有月份 (由新到舊排序)
+    if not df.empty:
+        month_options = ["🏆 歷史總花費"] + sorted(df["Month"].dropna().unique().tolist(), reverse=True)
+    else:
+        month_options = ["🏆 歷史總花費"]
+
+    # 下拉選單
+    selected_period = st.selectbox("📅 選擇統計區間", month_options)
+    
+    # 計算顯示金額
+    if not df.empty:
+        if selected_period == "🏆 歷史總花費":
+            display_amount = df["Amount"].sum()
+            display_label = "💸 累積總支出"
+        else:
+            display_amount = df[df["Month"] == selected_period]["Amount"].sum()
+            display_label = f"💸 {selected_period} 總支出"
+    else:
+        display_amount = 0
+        display_label = "💸 累積總支出"
+
+    # 顯示金額 (這裡就不顯示比上月多花了，因為選單會變)
+    st.metric(label=display_label, value=f"${display_amount:,.0f}")
+    
+    st.write("---")
+    
+    # === 遊戲設定 (本月預算) ===
+    st.header("🛡️ 本月防禦設定")
     monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
     
-    # 計算與上個月的差額
-    diff = current_spent - last_month_spent
-    delta_label = f"比上月{'多' if diff > 0 else '少'}花 ${abs(diff):,.0f}"
-    
-    # 顯示指標
-    st.metric(
-        label="💸 本月已花費", 
-        value=f"${current_spent:,.0f}", 
-        delta=delta_label,
-        delta_color="inverse" 
-    )
-    st.caption(f"📅 上月同期花費：${last_month_spent:,.0f}")
-    
-# --- 🛡️ 錢包防禦戰 ---
-percent = current_spent / monthly_budget if monthly_budget > 0 else 0
-remaining = monthly_budget - current_spent
+# --- 🛡️ 錢包防禦戰 (固定鎖定當月，不受側邊欄查詢影響) ---
+percent = current_month_spent_for_game / monthly_budget if monthly_budget > 0 else 0
+remaining = monthly_budget - current_month_spent_for_game
 _, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
 days_left = last_day - taiwan_date.day + 1
 daily_budget = remaining / days_left if days_left > 0 else 0
 
-st.subheader("🛡️ 錢包防禦戰")
+st.subheader("🛡️ 錢包防禦戰 (本月)")
 c_b1, c_b2, c_b3 = st.columns([2, 1, 1])
 
 with c_b1:
@@ -217,7 +165,6 @@ with c_b1:
     elif percent < 0.9: status_text = "⚔️ 青銅奮戰勇者 (遭遇苦戰)"
     elif percent < 1.0: status_text = "🔴 紅色警戒兵 (瀕臨極限)"
     else: status_text = "☠️ 骷髏錢包 (任務失敗)"
-        
     st.markdown(f'<div class="game-status">{status_text}</div>', unsafe_allow_html=True)
     st.progress(min(percent, 1.0))
 
@@ -248,6 +195,7 @@ with tab1:
                     raw_df = conn.read(worksheet="Expenses", ttl=0)
                     conn.update(worksheet="Expenses", data=pd.concat([raw_df, new_row], ignore_index=True))
                     st.toast("✨ 記帳完成！成功的開始")
+                    conn.reset()
                     time.sleep(1); st.rerun()
                 except Exception as e: st.error(f"錯誤：{e}")
 
@@ -259,6 +207,7 @@ with tab1:
                 if not raw_df.empty:
                     conn.update(worksheet="Expenses", data=raw_df.iloc[:-1])
                     st.toast("已刪除最後一筆紀錄")
+                    conn.reset()
                     time.sleep(1); st.rerun()
             except Exception as e: st.error(f"刪除失敗: {e}")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -274,7 +223,7 @@ with tab2:
             st.plotly_chart(fig, use_container_width=True)
     else: st.info("尚無資料")
 
-# === Tab 3: 列表 (樣式優化版) ===
+# === Tab 3: 列表 ===
 with tab3:
     st.subheader("📋 最近紀錄 (點擊 🗑️ 刪除)")
     if not df.empty:
@@ -285,18 +234,16 @@ with tab3:
             with st.container(border=True):
                 c1, c2, c3 = st.columns([3, 1.5, 0.8])
                 with c1:
-                    # 分類：使用新的亮藍色，黑底白底都清楚
                     st.markdown(f'<div class="card-title">{row["Category"]}</div>', unsafe_allow_html=True)
-                    # 備註：改用 card-note 樣式，自動適應黑/白背景
                     st.markdown(f'<div class="card-note">{row["Date"]} | {row["Note"]}</div>', unsafe_allow_html=True)
-                with c2: 
-                    st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
+                with c2: st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
                 with c3:
                     if st.button("🗑️", key=f"del_{row['orig_idx']}"):
                         try:
                             fresh_df = conn.read(worksheet="Expenses", ttl=0)
                             conn.update(worksheet="Expenses", data=fresh_df.drop(row['orig_idx']))
                             st.toast("🗑️ 已成功刪除紀錄")
+                            conn.reset()
                             time.sleep(1); st.rerun()
                         except Exception as e: st.error(f"失敗：{e}")
     else: st.info("尚無資料")
