@@ -254,4 +254,13 @@ with tab3:
                 with c1:
                     st.markdown(f'<div class="card-title">{row["Category"]}</div>', unsafe_allow_html=True)
                     st.caption(f"{row['Date']} | {row['Note']}")
-                with c
+                with c2: st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
+                with c3:
+                    if st.button("🗑️", key=f"del_{row['orig_idx']}"):
+                        try:
+                            fresh_df = conn.read(worksheet="Expenses", ttl=0)
+                            conn.update(worksheet="Expenses", data=fresh_df.drop(row['orig_idx']))
+                            st.toast("🗑️ 已成功刪除紀錄")
+                            time.sleep(1); st.rerun()
+                        except Exception as e: st.error(f"失敗：{e}")
+    else: st.info("尚無資料")
