@@ -176,7 +176,7 @@ _, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
 days_left = last_day - taiwan_date.day + 1
 daily_budget = remaining / days_left if days_left > 0 else 0
 
-st.subheader("🛡️ 錢包防禦戰")
+st.subheader("🛡️ 錢包防禦戰 (本月)")
 c_b1, c_b2, c_b3 = st.columns([2, 1, 1])
 
 with c_b1:
@@ -268,7 +268,10 @@ with tab3:
                         except Exception as e: st.error(f"失敗：{e}")
     else: st.info("尚無資料")
 
-# --- 底部署名 ---
+# --- 底部署名 (隱藏連結彩蛋) ---
 st.write("---")
-st.markdown('<div class="footer">作者 LunGo.</div>', unsafe_allow_html=True)
-
+st.markdown("""
+    <div class="footer">
+        作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#aaaaaa;">LunGo.</a>
+    </div>
+""", unsafe_allow_html=True)
