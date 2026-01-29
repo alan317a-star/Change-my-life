@@ -11,6 +11,10 @@ import random
 # --- 1. 頁面設定 ---
 st.set_page_config(page_title="Everyday Moments", layout="centered")
 
+# --- 初始化刪除確認狀態 ---
+if "delete_verify_idx" not in st.session_state:
+    st.session_state["delete_verify_idx"] = None
+
 # --- CSS 美化 ---
 st.markdown("""
     <style>
@@ -176,7 +180,7 @@ _, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
 days_left = last_day - taiwan_date.day + 1
 daily_budget = remaining / days_left if days_left > 0 else 0
 
-st.subheader("🛡️ 錢包防禦戰 ")
+st.subheader("🛡️ 錢包防禦戰")
 c_b1, c_b2, c_b3 = st.columns([2, 1, 1])
 
 with c_b1:
@@ -243,29 +247,40 @@ with tab2:
             st.plotly_chart(fig, use_container_width=True)
     else: st.info("尚無資料")
 
-# === Tab 3: 列表 ===
+# === Tab 3: 列表 (含防呆刪除) ===
 with tab3:
-    st.subheader("📋 最近紀錄 (點擊 🗑️ 刪除)")
+    st.subheader("📋 最近紀錄")
     if not df.empty:
         df_display = df.copy()
         df_display['orig_idx'] = df_display.index
         df_display = df_display.sort_values("Date", ascending=False).head(20)
         for _, row in df_display.iterrows():
             with st.container(border=True):
-                c1, c2, c3 = st.columns([3, 1.5, 0.8])
+                c1, c2, c3 = st.columns([3, 1.5, 0.9]) # 調整欄寬以容納確認按鈕
                 with c1:
                     st.markdown(f'<div class="card-title">{row["Category"]}</div>', unsafe_allow_html=True)
                     st.markdown(f'<div class="card-note">{row["Date"]} | {row["Note"]}</div>', unsafe_allow_html=True)
                 with c2: st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
                 with c3:
-                    if st.button("🗑️", key=f"del_{row['orig_idx']}"):
-                        try:
-                            fresh_df = conn.read(worksheet="Expenses", ttl=0)
-                            conn.update(worksheet="Expenses", data=fresh_df.drop(row['orig_idx']))
-                            st.toast("🗑️ 已成功刪除紀錄")
-                            conn.reset()
-                            time.sleep(1); st.rerun()
-                        except Exception as e: st.error(f"失敗：{e}")
+                    # --- 二次確認邏輯 ---
+                    # 檢查這筆資料是否正在「等待確認刪除」
+                    if st.session_state["delete_verify_idx"] == row['orig_idx']:
+                        # 顯示紅色的確認按鈕
+                        if st.button("⚠️ 確認刪除", key=f"conf_{row['orig_idx']}", type="primary"):
+                            try:
+                                fresh_df = conn.read(worksheet="Expenses", ttl=0)
+                                conn.update(worksheet="Expenses", data=fresh_df.drop(row['orig_idx']))
+                                st.toast("🗑️ 已成功刪除紀錄")
+                                st.session_state["delete_verify_idx"] = None # 重置狀態
+                                conn.reset()
+                                time.sleep(1); st.rerun()
+                            except Exception as e: st.error(f"失敗：{e}")
+                    else:
+                        # 顯示一般的垃圾桶按鈕
+                        if st.button("🗑️", key=f"del_{row['orig_idx']}"):
+                            # 點擊後，設定狀態為「這筆資料要確認」，並重新整理頁面
+                            st.session_state["delete_verify_idx"] = row['orig_idx']
+                            st.rerun()
     else: st.info("尚無資料")
 
 # --- 底部署名 (隱藏連結彩蛋) ---
@@ -275,4 +290,3 @@ st.markdown("""
         作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#aaaaaa;">LunGo.</a>
     </div>
 """, unsafe_allow_html=True)
-
