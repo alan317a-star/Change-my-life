@@ -79,7 +79,7 @@ st.markdown(f'<div class="quote-box">{selected_quote}</div>', unsafe_allow_html=
 # --- 2. 建立連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 3. 讀取資料 (加上錯誤處理) ---
+# --- 3. 讀取資料 ---
 try:
     df = conn.read(worksheet="Expenses", ttl=5)
     if df.empty:
@@ -90,7 +90,6 @@ try:
         df["Month"] = df["Date_dt"].dt.strftime("%Y-%m")
         df["Note"] = df["Note"].fillna("")
 except Exception:
-    # 如果讀取失敗 (例如 Quota exceeded)，建立空表格防止當機
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     st.toast("⚠️ 連線忙碌中，請稍後再試")
 
@@ -98,10 +97,19 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-# --- 計算當前月份花費 (給血量條使用，固定鎖定當月) ---
-current_month_spent_for_game = 0
+# --- 計算花費邏輯 (固定計算「本月」與「上月」，用於側邊欄提醒) ---
+current_spent = 0
+last_month_spent = 0
+
 if not df.empty:
-    current_month_spent_for_game = df[df["Month"] == current_month_str]["Amount"].sum()
+    # 1. 本月花費
+    current_spent = df[df["Month"] == current_month_str]["Amount"].sum()
+    
+    # 2. 上月花費
+    first_day_current = taiwan_date.replace(day=1)
+    last_month_end = first_day_current - timedelta(days=1)
+    last_month_str = last_month_end.strftime("%Y-%m")
+    last_month_spent = df[df["Month"] == last_month_str]["Amount"].sum()
 
 # --- 側邊欄 ---
 with st.sidebar:
@@ -116,42 +124,51 @@ with st.sidebar:
 
     st.write("---")
     
-    # === 新功能：歷史花費查詢 ===
-    st.header("💰 帳務查詢")
+    # === 區塊 1: 錢包狀態 (即時監控：本月 vs 上月) ===
+    st.header("💰 錢包狀態")
+    monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
+
+    # 計算差額 (這是您最想要的功能)
+    diff = current_spent - last_month_spent
+    delta_label = f"比上月{'多' if diff > 0 else '少'}花 ${abs(diff):,.0f}"
+
+    st.metric(
+        label="💸 本月已花費", 
+        value=f"${current_spent:,.0f}", 
+        delta=delta_label,
+        delta_color="inverse" 
+    )
+    st.caption(f"📅 上月同期花費：${last_month_spent:,.0f}")
     
-    # 準備選項：歷史總花費 + 所有月份 (由新到舊排序)
+    st.write("---")
+    
+    # === 區塊 2: 帳務查詢 (查歷史紀錄) ===
+    st.header("📜 歷史帳務")
+    
     if not df.empty:
         month_options = ["🏆 歷史總花費"] + sorted(df["Month"].dropna().unique().tolist(), reverse=True)
     else:
         month_options = ["🏆 歷史總花費"]
 
-    # 下拉選單
-    selected_period = st.selectbox("📅 選擇統計區間", month_options)
+    selected_period = st.selectbox("📅 查詢區間", month_options)
     
-    # 計算顯示金額
     if not df.empty:
         if selected_period == "🏆 歷史總花費":
             display_amount = df["Amount"].sum()
-            display_label = "💸 累積總支出"
+            display_label = "累積總支出"
         else:
             display_amount = df[df["Month"] == selected_period]["Amount"].sum()
-            display_label = f"💸 {selected_period} 總支出"
+            display_label = f"{selected_period} 總支出"
     else:
         display_amount = 0
-        display_label = "💸 累積總支出"
+        display_label = "累積總支出"
 
-    # 顯示金額 (這裡就不顯示比上月多花了，因為選單會變)
-    st.metric(label=display_label, value=f"${display_amount:,.0f}")
+    st.info(f"**{display_label}**\n# ${display_amount:,.0f}")
+
     
-    st.write("---")
-    
-    # === 遊戲設定 (本月預算) ===
-    st.header("🛡️ 本月防禦設定")
-    monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
-    
-# --- 🛡️ 錢包防禦戰 (固定鎖定當月，不受側邊欄查詢影響) ---
-percent = current_month_spent_for_game / monthly_budget if monthly_budget > 0 else 0
-remaining = monthly_budget - current_month_spent_for_game
+# --- 🛡️ 錢包防禦戰 (鎖定當月) ---
+percent = current_spent / monthly_budget if monthly_budget > 0 else 0
+remaining = monthly_budget - current_spent
 _, last_day = calendar.monthrange(taiwan_date.year, taiwan_date.month)
 days_left = last_day - taiwan_date.day + 1
 daily_budget = remaining / days_left if days_left > 0 else 0
