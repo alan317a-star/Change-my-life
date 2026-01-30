@@ -33,17 +33,33 @@ def add_apple_touch_icon(image_path):
 
 add_apple_touch_icon("icon.png")
 
-# --- CSS 優化 ---
+# --- CSS 優化 (極簡潔淨版) ---
 st.markdown("""
     <style>
-    /* 隱藏預設元素 */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header[data-testid="stHeader"] {background-color: rgba(0,0,0,0); z-index: 999;}
+    /* =================================
+       🔥 隱藏所有 Streamlit 預設 UI 元素
+       ================================= */
     
-    /* 手機版面調整 */
+    /* 1. 隱藏右上角選單 (三點)、Deploy 按鈕、Running 小人 */
+    #MainMenu {visibility: hidden;}
+    .stDeployButton {display:none;}
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    
+    /* 2. 隱藏頂部 Header 橫條 (讓畫面充滿頂部) */
+    header {visibility: hidden !important;}
+    
+    /* 3. 隱藏底部 Footer (Made with Streamlit) */
+    footer {visibility: hidden;}
+    
+    /* 4. 隱藏右下角浮水印 (皇冠、管理按鈕、查看器) */
+    [data-testid="stStatusWidget"] {visibility: hidden;}
+    .viewerBadge_container__1QSob {display: none !important;}
+    
+    /* =================================
+       📱 手機版面調整
+       ================================= */
     .block-container {
-        padding-top: 3rem !important; 
+        padding-top: 1rem !important; /* 頂部留白減少，因為 Header 藏起來了 */
         padding-bottom: 5rem !important;
     }
     
@@ -461,9 +477,7 @@ with tab4:
     if not coupon_df.empty:
         history = coupon_df[coupon_df["Status"] == "已使用"]
         if not history.empty:
-            # 倒序排列
             history = history.sort_values("Date", ascending=False)
-            
             for i, row in history.iterrows():
                 with st.container(border=True):
                     st.markdown(f'<div class="history-item-title">{row["Prize"]}</div>', unsafe_allow_html=True)
