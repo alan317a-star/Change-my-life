@@ -36,40 +36,25 @@ add_apple_touch_icon("icon.png")
 # --- CSS 優化 ---
 st.markdown("""
     <style>
-    /* === 1. 隱藏 Streamlit 預設元素 === */
+    /* 隱藏預設元素 */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    header[data-testid="stHeader"] {background-color: rgba(0,0,0,0); z-index: 999;}
     
-    /* Header 背景透明 */
-    header[data-testid="stHeader"] {
-        background-color: rgba(0,0,0,0); 
-        z-index: 999;
-    }
-    
-    /* [已刪除] 側邊欄背景色設定 
-       原本這裡有一段強制設定 background-color: #f8f9fa;
-       現在刪除後，它就會自動跟隨手機系統變成 深色/淺色！
-    */
-
-    /* === 2. 手機版面調整 === */
+    /* 手機版面調整 */
     .block-container {
         padding-top: 3rem !important; 
         padding-bottom: 5rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
     }
     
-    /* === 3. 輸入框與文字設定 === */
+    /* 輸入框與文字 */
     .stTextInput input, .stNumberInput input, .stDateInput input {
         font-size: 18px !important;
         background-color: #fff9c4 !important;
         color: #000000 !important;
         border-radius: 12px !important;
         height: 50px !important;
-        -webkit-text-fill-color: #000000 !important;
-        caret-color: #000000 !important;
     }
-    
     div[data-baseweb="select"] > div {
         background-color: #fff9c4 !important;
         color: #000000 !important;
@@ -77,21 +62,11 @@ st.markdown("""
         height: 50px !important; 
         align-items: center;
     }
-    div[data-baseweb="select"] span {
-        color: #000000 !important;
-        font-size: 18px !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
     
-    /* === 4. 按鈕設定 === */
+    /* 按鈕 */
     div.stButton > button {
-        width: 100%; 
-        height: 3.8em;
-        font-size: 20px !important; 
-        font-weight: bold;
-        border-radius: 15px;
-        border: none; 
-        margin-top: 5px;
+        width: 100%; height: 3.8em; font-size: 20px !important; font-weight: bold;
+        border-radius: 15px; border: none; margin-top: 5px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         transition: transform 0.1s;
     }
@@ -99,75 +74,36 @@ st.markdown("""
 
     .save-btn > button { background: linear-gradient(135deg, #FF6B6B 0%, #FF4B4B 100%); color: white; }
     .del-btn > button { background-color: #6c757d; color: white; }
-    .stButton > button[kind="secondary"] { 
-        height: 100% !important; 
-        margin-top: 0px !important; 
-        font-size: 18px !important; 
-        background-color: #f1f3f5 !important; 
-        border: 1px solid #dee2e6 !important; 
-        color: #495057 !important;
-        border-radius: 10px !important;
-    }
+    .gift-btn > button { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; }
     
-    /* === 5. Toast 通知 (正中間) === */
+    /* Toast 通知 (正中間) */
     div[data-testid="stToast"] { 
-        position: fixed !important;
-        top: 50% !important;        
-        left: 50% !important;       
+        position: fixed !important; top: 50% !important; left: 50% !important;       
         transform: translate(-50%, -50%) !important; 
-        
-        width: auto !important;
-        min-width: 300px !important; 
-        max-width: 80vw !important;  
-        
-        border-radius: 20px !important; 
-        background-color: rgba(255, 255, 255, 0.98) !important; 
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important; 
-        border: 2px solid #FF4B4B !important;
-        text-align: center !important;
-        padding: 10px !important;
-        z-index: 999999 !important; 
+        width: auto !important; min-width: 300px !important; max-width: 80vw !important;  
+        border-radius: 20px !important; background-color: rgba(255, 255, 255, 0.98) !important; 
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important; border: 2px solid #FF4B4B !important;
+        text-align: center !important; padding: 10px !important; z-index: 999999 !important; 
     }
+    div[data-testid="stToast"] * { font-size: 20px !important; color: #000000 !important; justify-content: center !important; }
     
-    div[data-testid="stToast"] * { 
-        font-size: 20px !important; 
-        color: #000000 !important; 
-        justify-content: center !important;
-        text-align: center !important;
-    }
-    
-    /* === 6. 其他元件優化 === */
     .game-status { font-size: 20px; font-weight: bold; margin-bottom: 5px; text-align: center; }
-    
     .card-title { font-size: 19px; font-weight: bold; color: #2196F3 !important; margin-bottom: 2px; }
     .card-note { font-size: 14px; color: inherit; opacity: 0.8; }
     .card-amount { font-size: 20px; font-weight: bold; color: #FF4B4B; text-align: right; line-height: 1.5; }
-    
     .quote-box { background-color: #f0f2f6; border-left: 5px solid #FF4B4B; padding: 12px; margin-bottom: 15px; border-radius: 8px; font-style: italic; color: #555; text-align: center; font-size: 15px; }
     .footer { text-align: center; font-size: 12px; color: #cccccc; margin-top: 30px; margin-bottom: 20px; font-family: sans-serif; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- 初始化狀態 ---
-if "delete_verify_idx" not in st.session_state:
-    st.session_state["delete_verify_idx"] = None
+if "delete_verify_idx" not in st.session_state: st.session_state["delete_verify_idx"] = None
 
 st.title("Everyday Moments")
 
 # --- 隨機勉勵短語 ---
 if "current_quote" not in st.session_state:
-    quotes = [
-        "🌱 每一筆省下的錢，都是未來的自由。", "💪 記帳不是為了省錢，而是為了更聰明地花錢。", "✨ 今天的自律，是為了明天的選擇權。",
-        "🧱 財富是像堆積木一樣，一點一點累積起來的。", "🌟 你不理財，財不理你；用心生活，歲月靜好。", "🎯 透過記帳，看見真實的自己。",
-        "🌈 能夠控制慾望的人，才能掌控人生。", "🌻 每一塊錢都有它的使命，別讓它白白流失。", "🚀 投資自己，是報酬率最高的投資。",
-        "❤️ 簡單生活，富足心靈。", "💧 涓涓細流，終成大海；小錢不省，大錢難留。", "🛑 想要不等於需要，下單前多想三秒鐘。",
-        "📅 記帳是給未來的自己一封情書。", "⚖️ 理財就是理生活，平衡才是王道。", "🗝️ 財富不是人生的目的，而是實現夢想的工具。",
-        "🦁 省錢不需要像苦行僧，只需要像獵人一樣精準。", "⏳ 時間就是金錢，善用每一分資源。", "🛡️ 建立緊急預備金，是給生活穿上防彈衣。",
-        "👣 千里之行，始於足下；百萬資產，始於記帳。", "🚫 遠離精緻窮，擁抱踏實富。", "💎 真正的富有，是擁有支配時間的權利。",
-        "🧘‍♀️ 心若富足，生活處處是寶藏。", "📈 每天進步 1%，一年後你會感謝現在的自己。", "🌤️ 存錢不是為了過苦日子，而是為了迎接好日子。",
-        "🔍 記帳不只是紀錄數字，更是檢視生活軌跡。", "🎁 最好的禮物，是一個無後顧之憂的未來。", "🚦 克制一時的衝動，換來長久的安穩。",
-        "🧠 投資大腦，永遠不會虧損。", "🕊️ 財務自由的第一步，從了解你的現金流開始。", "🏡 家的溫暖，建立在安穩的經濟基礎之上。"
-    ]
+    quotes = ["🌱 每一筆省下的錢，都是未來的自由。", "💪 記帳不是為了省錢，而是為了更聰明地花錢。", "✨ 今天的自律，是為了明天的選擇權。", "🧱 財富是像堆積木一樣，一點一點累積起來的。", "🌟 你不理財，財不理你；用心生活，歲月靜好。", "🎯 透過記帳，看見真實的自己。", "🌈 能夠控制慾望的人，才能掌控人生。", "🌻 每一塊錢都有它的使命。", "🚀 投資自己，是報酬率最高的投資。", "❤️ 簡單生活，富足心靈。", "🏡 家的溫暖，建立在安穩的經濟基礎之上。"]
     st.session_state["current_quote"] = random.choice(quotes)
 st.markdown(f'<div class="quote-box">{st.session_state["current_quote"]}</div>', unsafe_allow_html=True)
 
@@ -177,14 +113,13 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # --- 讀取資料 ---
 try:
     df = conn.read(worksheet="Expenses", ttl=600)
-    if df.empty:
-        df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
+    if df.empty: df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     else:
         df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
         df["Date_dt"] = pd.to_datetime(df["Date"], errors="coerce")
         df["Month"] = df["Date_dt"].dt.strftime("%Y-%m")
         df["Note"] = df["Note"].fillna("")
-except Exception:
+except:
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     st.toast("⚠️ 連線忙碌中，請稍後再試")
 
@@ -192,14 +127,9 @@ taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
 
-current_spent = 0
-last_month_spent = 0
-if not df.empty:
-    current_spent = df[df["Month"] == current_month_str]["Amount"].sum()
-    first_day_current = taiwan_date.replace(day=1)
-    last_month_end = first_day_current - timedelta(days=1)
-    last_month_str = last_month_end.strftime("%Y-%m")
-    last_month_spent = df[df["Month"] == last_month_str]["Amount"].sum()
+current_spent = df[df["Month"] == current_month_str]["Amount"].sum() if not df.empty else 0
+last_month_end = taiwan_date.replace(day=1) - timedelta(days=1)
+last_month_spent = df[df["Month"] == last_month_end.strftime("%Y-%m")]["Amount"].sum() if not df.empty else 0
 
 # --- 側邊欄 ---
 with st.sidebar:
@@ -210,6 +140,50 @@ with st.sidebar:
     if baby_days > 0: st.success(f"👶 承淅來到地球 **{baby_days}** 天囉！")
     elif baby_days == 0: st.success("🎂 就是今天！寶寶誕生啦！")
     else: st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
+    
+    st.write("---")
+
+    # === 🎁 驚喜兌換專區 (純功能版) ===
+    with st.expander("🎁 驚喜兌換專區", expanded=False):
+        st.caption("輸入神祕代碼，看看有什麼驚喜！")
+        coupon_code = st.text_input("輸入代碼", key="coupon_input")
+        st.markdown('<div class="gift-btn">', unsafe_allow_html=True)
+        if st.button("🎁 立即兌換"):
+            if coupon_code:
+                try:
+                    # 讀取 Coupons 表格
+                    try:
+                        coupon_df = conn.read(worksheet="Coupons", ttl=0)
+                    except:
+                        st.error("⚠️ 請先建立 Coupons 分頁！")
+                        st.stop()
+                    
+                    # 搜尋代碼
+                    coupon_df["Code"] = coupon_df["Code"].astype(str).str.strip()
+                    input_code = coupon_code.strip()
+                    target_row = coupon_df[coupon_df["Code"] == input_code]
+                    
+                    if not target_row.empty:
+                        idx = target_row.index[0]
+                        if target_row.at[idx, "Status"] == "未使用":
+                            prize = target_row.at[idx, "Prize"]
+                            # 更新狀態
+                            coupon_df.at[idx, "Status"] = "已兌換"
+                            coupon_df.at[idx, "Date"] = str(taiwan_date)
+                            conn.update(worksheet="Coupons", data=coupon_df)
+                            
+                            st.balloons()
+                            st.toast(f"🎉 兌換成功！獲得：{prize}")
+                            conn.reset()
+                        else:
+                            st.error(f"❌ 已經兌換過囉！({target_row.at[idx, 'Date']})")
+                    else:
+                        st.error("❓ 代碼錯誤")
+                except Exception as e:
+                    st.error(f"錯誤: {e}")
+            else:
+                st.warning("請輸入代碼")
+        st.markdown('</div>', unsafe_allow_html=True)
     
     st.write("---")
 
@@ -230,7 +204,6 @@ with st.sidebar:
             query_amount = df[df["Month"] == selected_query]["Amount"].sum()
             query_label = f"{selected_query} 總支出"
         st.info(f"{query_label}: **${query_amount:,.0f}**")
-    else: st.caption("尚無歷史資料")
     
     st.write("---")
     
