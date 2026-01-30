@@ -1,43 +1,63 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 from datetime import date, datetime, timedelta
 import calendar
 import time
 import random
+import base64
+import os
 
 # --- 1. 頁面設定 ---
 st.set_page_config(
     page_title="Everyday Moments", 
-    page_icon="app_logo.png",  # <--- 檔名一定要改！強迫瀏覽器重新抓取
+    page_icon="app_logo.png", 
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed" #
 )
 
-# --- CSS 極致 APP 化美化 (修正側邊欄按鈕問題) ---
+# --- 🍎 專治 iPhone 主畫面圖示 (Base64 強制注入法) ---
+def add_apple_touch_icon(image_path):
+    try:
+        # 檢查檔案是否存在
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as image_file:
+                # 把圖片轉成 Base64 編碼
+                encoded_string = base64.b64encode(image_file.read()).decode()
+            
+            # 透過 HTML 強制寫入 apple-touch-icon
+            apple_touch_icon_html = f"""
+            <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,{encoded_string}">
+            <link rel="icon" type="image/png" href="data:image/png;base64,{encoded_string}">
+            """
+            st.markdown(apple_touch_icon_html, unsafe_allow_html=True)
+        else:
+            st.error(f"找不到圖示檔案：{image_path}，請確認有上傳到 GitHub")
+    except Exception as e:
+        st.error(f"圖示載入失敗: {e}")
+
+# 執行注入圖示 (這行很重要)
+add_apple_touch_icon("app_logo.png")
+
+
+# --- CSS 極致 APP 化美化 ---
 st.markdown("""
     <style>
     /* === 1. 隱藏 Streamlit 預設元素 === */
-    #MainMenu {visibility: hidden;} /* 隱藏右上角三個點點選單 */
-    footer {visibility: hidden;}    /* 隱藏底部 Made with Streamlit */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     
-    /* [修正] 不要完全隱藏 header，改為背景透明 */
-    /* 這樣左上角的「>」側邊欄按鈕才會出現 */
+    /* 背景透明，保留左上角按鈕 */
     header[data-testid="stHeader"] {
         background-color: rgba(0,0,0,0); 
         z-index: 1;
     }
-    
-    /* 隱藏頂部的彩色橫條裝飾 */
-    .stApp > header {
-        background-color: transparent;
-    }
+    .stApp > header { background-color: transparent; }
     
     /* === 2. 手機版面調整 === */
     .block-container {
-        padding-top: 3rem !important; /* 留一點空間給頂部的側邊欄按鈕 */
+        padding-top: 3rem !important;
         padding-bottom: 5rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
@@ -173,7 +193,7 @@ if not df.empty:
     last_month_str = last_month_end.strftime("%Y-%m")
     last_month_spent = df[df["Month"] == last_month_str]["Amount"].sum()
 
-# --- 側邊欄 (預設收起，按箭頭打開) ---
+# --- 側邊欄 (預設展開) ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
     love_days = (taiwan_date - date(2019, 6, 15)).days
@@ -255,7 +275,7 @@ with tab1:
                         "Note": note_val
                     }])
                     
-                    # 確保沒有 User 欄位 (相容舊版)
+                    # 確保沒有 User 欄位
                     final_df = pd.concat([raw_df, new_row], ignore_index=True)
                     if "User" in final_df.columns:
                         final_df = final_df.drop(columns=["User"])
@@ -335,5 +355,3 @@ st.markdown("""
         作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
     </div>
 """, unsafe_allow_html=True)
-
-
