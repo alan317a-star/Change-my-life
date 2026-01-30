@@ -33,33 +33,50 @@ def add_apple_touch_icon(image_path):
 
 add_apple_touch_icon("icon.png")
 
-# --- CSS 優化 (極簡潔淨版) ---
+# --- CSS 優化 (修正側邊欄消失問題) ---
 st.markdown("""
     <style>
     /* =================================
-       🔥 隱藏所有 Streamlit 預設 UI 元素
+       🔥 UI 隱藏與優化區
        ================================= */
     
-    /* 1. 隱藏右上角選單 (三點)、Deploy 按鈕、Running 小人 */
-    #MainMenu {visibility: hidden;}
-    .stDeployButton {display:none;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
+    /* 1. 隱藏右上角選單 (三點)、Deploy 按鈕、頭像 */
+    /* 注意：不能隱藏 header，否則左上角的側邊欄按鈕會不見 */
+    [data-testid="stToolbar"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
     
-    /* 2. 隱藏頂部 Header 橫條 (讓畫面充滿頂部) */
-    header {visibility: hidden !important;}
-    
-    /* 3. 隱藏底部 Footer (Made with Streamlit) */
-    footer {visibility: hidden;}
+    /* 2. 隱藏頂部彩虹線 (Decoration) */
+    [data-testid="stDecoration"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
+
+    /* 3. 強力隱藏底部 Footer (Made with Streamlit) */
+    footer {
+        visibility: hidden !important;
+        display: none !important;
+    }
     
     /* 4. 隱藏右下角浮水印 (皇冠、管理按鈕、查看器) */
-    [data-testid="stStatusWidget"] {visibility: hidden;}
-    .viewerBadge_container__1QSob {display: none !important;}
+    [data-testid="stStatusWidget"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    .viewerBadge_container__1QSob {
+        display: none !important;
+    }
+    #MainMenu {
+        visibility: hidden !important;
+        display: none !important;
+    }
     
     /* =================================
        📱 手機版面調整
        ================================= */
     .block-container {
-        padding-top: 1rem !important; /* 頂部留白減少，因為 Header 藏起來了 */
+        padding-top: 2rem !important; 
         padding-bottom: 5rem !important;
     }
     
