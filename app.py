@@ -75,8 +75,21 @@ st.markdown("""
     .save-btn > button { background: linear-gradient(135deg, #FF6B6B 0%, #FF4B4B 100%); color: white; }
     .del-btn > button { background-color: #6c757d; color: white; }
     .gift-btn > button { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; }
+    .use-btn > button { background-color: #4CAF50; color: white; height: 3em !important; font-size: 16px !important;}
     
-    /* Toast 通知 (正中間) */
+    /* 背包卡片樣式 */
+    .backpack-card {
+        background-color: #E8F5E9;
+        border: 2px solid #4CAF50;
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+    .backpack-title { font-weight: bold; font-size: 18px; color: #2E7D32; }
+    .backpack-note { font-size: 12px; color: #666; margin-bottom: 5px;}
+
+    /* Toast 通知 */
     div[data-testid="stToast"] { 
         position: fixed !important; top: 50% !important; left: 50% !important;       
         transform: translate(-50%, -50%) !important; 
@@ -110,7 +123,7 @@ st.markdown(f'<div class="quote-box">{st.session_state["current_quote"]}</div>',
 # --- 連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 讀取資料 ---
+# --- 讀取記帳資料 ---
 try:
     df = conn.read(worksheet="Expenses", ttl=600)
     if df.empty: df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
@@ -123,7 +136,7 @@ except:
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     st.toast("⚠️ 連線忙碌中，請稍後再試")
 
-# 時間設定 (精準到秒)
+# 時間設定
 taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
@@ -144,49 +157,82 @@ with st.sidebar:
     
     st.write("---")
 
-    # === 🎁 驚喜兌換專區 ===
-    with st.expander("🎁 驚喜兌換專區", expanded=False):
-        st.caption("輸入神祕代碼，看看有什麼驚喜！")
+    # ==========================================
+    # 🎒 驚喜背包系統 (讀取 Coupons)
+    # ==========================================
+    try:
+        coupon_df = conn.read(worksheet="Coupons", ttl=0)
+    except:
+        coupon_df = pd.DataFrame(columns=["Code", "Prize", "Status", "Date"])
+        # 如果是第一次，避免報錯
+        
+    # 1. 兌換輸入區
+    with st.expander("🎁 輸入代碼領取獎品", expanded=False):
         coupon_code = st.text_input("輸入代碼", key="coupon_input")
         st.markdown('<div class="gift-btn">', unsafe_allow_html=True)
-        if st.button("🎁 立即兌換"):
+        if st.button("🎁 領取到背包"):
             if coupon_code:
-                try:
-                    # 讀取 Coupons
-                    try:
-                        coupon_df = conn.read(worksheet="Coupons", ttl=0)
-                    except:
-                        st.error("⚠️ 請先建立 Coupons 分頁！")
-                        st.stop()
-                    
+                if not coupon_df.empty:
                     coupon_df["Code"] = coupon_df["Code"].astype(str).str.strip()
                     input_code = coupon_code.strip()
                     target_row = coupon_df[coupon_df["Code"] == input_code]
                     
                     if not target_row.empty:
                         idx = target_row.index[0]
-                        if target_row.at[idx, "Status"] == "未使用":
+                        current_status = target_row.at[idx, "Status"]
+                        
+                        if current_status == "未使用":
                             prize = target_row.at[idx, "Prize"]
-                            
-                            # 更新狀態 & 時間 (精準到秒)
-                            coupon_df.at[idx, "Status"] = "已兌換"
-                            # 這裡是關鍵修改：寫入 YYYY-MM-DD HH:MM:SS
-                            coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
-                            
+                            # 更新為 "持有中"
+                            coupon_df.at[idx, "Status"] = "持有中"
+                            coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S") # 記錄領取時間
                             conn.update(worksheet="Coupons", data=coupon_df)
-                            
                             st.balloons()
-                            st.toast(f"🎉 兌換成功！獲得：{prize}")
+                            st.toast(f"🎒 成功放入背包：{prize}")
                             conn.reset()
+                            time.sleep(1); st.rerun()
+                        elif current_status == "持有中":
+                            st.warning("🎒 這個獎品已經在你的背包裡囉！")
                         else:
-                            st.error(f"❌ 已經兌換過囉！\n({target_row.at[idx, 'Date']})")
+                            st.error("❌ 已經使用過囉！")
                     else:
                         st.error("❓ 代碼錯誤")
-                except Exception as e:
-                    st.error(f"錯誤: {e}")
-            else:
-                st.warning("請輸入代碼")
+                else:
+                    st.error("請建立 Coupons 分頁")
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # 2. 🎒 我的背包展示區 (只顯示 "持有中")
+    st.markdown("### 🎒 我的背包")
+    if not coupon_df.empty:
+        # 篩選出 "持有中" 的物品
+        inventory = coupon_df[coupon_df["Status"] == "持有中"]
+        
+        if not inventory.empty:
+            for i, row in inventory.iterrows():
+                # 顯示卡片
+                st.markdown(f"""
+                <div class="backpack-card">
+                    <div class="backpack-title">🎁 {row['Prize']}</div>
+                    <div class="backpack-note">領取時間: {row['Date']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 使用按鈕
+                st.markdown('<div class="use-btn">', unsafe_allow_html=True)
+                if st.button(f"✨ 立即使用", key=f"use_{i}"):
+                    # 更新狀態為 "已使用"
+                    coupon_df.at[i, "Status"] = "已使用"
+                    # 更新日期為 "使用時間" (覆蓋掉領取時間，或是您想保留兩者也可以，這邊先覆蓋更新為使用時間)
+                    coupon_df.at[i, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    conn.update(worksheet="Coupons", data=coupon_df)
+                    st.toast(f"✅ 已使用：{row['Prize']}，享受吧！")
+                    st.balloons()
+                    conn.reset()
+                    time.sleep(1); st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.caption("🎒 背包空空的，快去輸入代碼！")
     
     st.write("---")
 
