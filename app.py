@@ -33,56 +33,47 @@ def add_apple_touch_icon(image_path):
 
 add_apple_touch_icon("icon.png")
 
-# --- CSS 優化 (iOS 強力顯色版) ---
+# --- CSS 優化 (iOS 穩定白底版) ---
 st.markdown("""
     <style>
     /* ============================================================
-       🔥 iOS 側邊欄按鈕 - 強力顯色修正
+       🔥 iOS 側邊欄按鈕 - 實體白底修復方案
        ============================================================ */
     
-    /* 1. 讓 Header 透明，但保留空間 */
+    /* 1. 恢復 Header 為實心白色，確保觸控區域有效 */
     header[data-testid="stHeader"] {
-        background-color: transparent !important;
-        pointer-events: none; /* 讓點擊穿透 Header，除了按鈕 */
+        background-color: #ffffff !important; /* 實心白 */
+        border-bottom: 1px solid #f0f0f0 !important; /* 淡淡的底線 */
+        height: 3.5rem !important;
+        z-index: 100000 !important;
+        display: block !important;
+        visibility: visible !important;
     }
 
-    /* 2. 針對「側邊欄開關按鈕」的容器 */
+    /* 2. 強制顯示左上角「>」按鈕，並設為黑色 */
     [data-testid="collapsedControl"] {
         display: block !important;
         visibility: visible !important;
-        pointer-events: auto; /* 恢復按鈕可點擊 */
-        z-index: 1000002 !important; /* 最高層級 */
-        left: 10px !important;
-        top: 10px !important;
-        position: fixed !important; /* 固定在螢幕左上角 */
-    }
-
-    /* 3. 針對「按鈕本體」做造型 (加白色圓底，防護罩) */
-    [data-testid="collapsedControl"] button {
-        background-color: rgba(255, 255, 255, 0.9) !important; /* 白色半透明背景 */
-        border-radius: 50% !important; /* 圓形 */
-        width: 3rem !important;
-        height: 3rem !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important; /* 加一點陰影讓它浮起來 */
-        border: 1px solid #ddd !important;
-    }
-
-    /* 4. 針對「箭頭圖標」強制變黑 */
-    [data-testid="collapsedControl"] svg {
-        fill: #000000 !important; /* 強制黑色 */
-        color: #000000 !important;
-        width: 1.5rem !important;
-        height: 1.5rem !important;
-    }
-
-    /* 5. 隱藏右上角 Toolbar (三點、Deploy) */
-    [data-testid="stToolbar"] {
-        display: none !important;
+        color: #000000 !important; /* 黑色 */
+        z-index: 100001 !important;
     }
     
-    /* 6. 隱藏頂部彩虹線 */
+    /* 3. 確保按鈕內的箭頭圖示也是黑色 */
+    [data-testid="collapsedControl"] svg {
+        fill: #000000 !important;
+        stroke: #000000 !important;
+    }
+
+    /* 4. 隱藏右上角 Toolbar (三點選單、Deploy) */
+    [data-testid="stToolbar"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* 5. 隱藏頂部彩虹裝飾線 */
     [data-testid="stDecoration"] {
         display: none !important;
+        visibility: hidden !important;
     }
 
     /* =================================
@@ -97,9 +88,9 @@ st.markdown("""
     .viewerBadge_container__1QSob { display: none !important; }
     #MainMenu { display: none !important; }
     
-    /* 版面微調 - 頂部留多一點空間給按鈕 */
+    /* 內容往下推，避免被 Header 擋住 */
     .block-container {
-        padding-top: 4.5rem !important; 
+        padding-top: 4rem !important; 
         padding-bottom: 5rem !important;
     }
     
@@ -526,14 +517,4 @@ with tab4:
                     detail_content = str(row['Detail'])
                     if len(detail_content) > 1 and detail_content != "nan":
                         with st.expander("💌 回顧信件"):
-                            st.markdown(f'<div class="letter-box" style="background-color:#f0f0f0; border-color:#aaa;">{detail_content}</div>', unsafe_allow_html=True)
-        else:
-            st.caption("尚無歷史紀錄")
-
-# --- Footer ---
-st.write("---")
-st.markdown("""
-    <div class="footer">
-        作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
-    </div>
-""", unsafe_allow_html=True)
+                            st.markdown(f'<div class="letter-box" style="background-color:#f0f0f0; border-color:#aaa;">{detail_content}</div>', unsafe_allow_html=True
