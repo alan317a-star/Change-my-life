@@ -517,4 +517,14 @@ with tab4:
                     detail_content = str(row['Detail'])
                     if len(detail_content) > 1 and detail_content != "nan":
                         with st.expander("💌 回顧信件"):
-                            st.markdown(f'<div class="letter-box" style="background-color:#f0f0f0; border-color:#aaa;">{detail_content}</div>', unsafe_allow_html=True
+                            st.markdown(f'<div class="letter-box" style="background-color:#f0f0f0; border-color:#aaa;">{detail_content}</div>', unsafe_allow_html=True)
+        else:
+            st.caption("尚無歷史紀錄")
+
+# --- Footer ---
+st.write("---")
+st.markdown("""
+    <div class="footer">
+        作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
+    </div>
+""", unsafe_allow_html=True)
