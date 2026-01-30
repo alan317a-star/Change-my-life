@@ -55,6 +55,8 @@ st.markdown("""
         border-radius: 12px !important;
         height: 50px !important;
     }
+    
+    /* 下拉選單美化 */
     div[data-baseweb="select"] > div {
         background-color: #fff9c4 !important;
         color: #000000 !important;
@@ -62,8 +64,12 @@ st.markdown("""
         height: 50px !important; 
         align-items: center;
     }
+    div[data-baseweb="select"] span {
+        color: #000000 !important;
+        font-size: 18px !important; 
+    }
     
-    /* 按鈕 */
+    /* 按鈕通用設定 */
     div.stButton > button {
         width: 100%; height: 3.8em; font-size: 20px !important; font-weight: bold;
         border-radius: 15px; border: none; margin-top: 5px;
@@ -72,23 +78,22 @@ st.markdown("""
     }
     div.stButton > button:active { transform: scale(0.98); }
 
+    /* 各種按鈕顏色 */
     .save-btn > button { background: linear-gradient(135deg, #FF6B6B 0%, #FF4B4B 100%); color: white; }
     .del-btn > button { background-color: #6c757d; color: white; }
     .gift-btn > button { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; }
-    .use-btn > button { background-color: #4CAF50; color: white; height: 3em !important; font-size: 16px !important;}
     
-    /* 背包卡片樣式 */
-    .backpack-card {
-        background-color: #E8F5E9;
-        border: 2px solid #4CAF50;
-        border-radius: 10px;
-        padding: 10px;
-        margin-bottom: 10px;
-        text-align: center;
+    /* [修改] 使用按鈕 (配合右側佈局) */
+    .use-btn > button { 
+        background-color: #4CAF50 !important; 
+        color: white !important; 
+        height: 100% !important; /* 填滿高度 */
+        min-height: 80px !important; /* 強制高度以配合左側文字 */
+        font-size: 18px !important;
+        margin-top: 0px !important;
+        border-radius: 12px !important;
     }
-    .backpack-title { font-weight: bold; font-size: 18px; color: #2E7D32; }
-    .backpack-note { font-size: 12px; color: #666; margin-bottom: 5px;}
-
+    
     /* Toast 通知 */
     div[data-testid="stToast"] { 
         position: fixed !important; top: 50% !important; left: 50% !important;       
@@ -123,7 +128,7 @@ st.markdown(f'<div class="quote-box">{st.session_state["current_quote"]}</div>',
 # --- 連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 讀取記帳資料 ---
+# --- 讀取資料 ---
 try:
     df = conn.read(worksheet="Expenses", ttl=600)
     if df.empty: df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
@@ -136,7 +141,6 @@ except:
     df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     st.toast("⚠️ 連線忙碌中，請稍後再試")
 
-# 時間設定
 taiwan_now = datetime.utcnow() + timedelta(hours=8)
 taiwan_date = taiwan_now.date()
 current_month_str = taiwan_now.strftime("%Y-%m")
@@ -158,13 +162,12 @@ with st.sidebar:
     st.write("---")
 
     # ==========================================
-    # 🎒 驚喜背包系統 (讀取 Coupons)
+    # 🎒 驚喜背包系統
     # ==========================================
     try:
         coupon_df = conn.read(worksheet="Coupons", ttl=0)
     except:
         coupon_df = pd.DataFrame(columns=["Code", "Prize", "Status", "Date"])
-        # 如果是第一次，避免報錯
         
     # 1. 兌換輸入區
     with st.expander("🎁 輸入代碼領取獎品", expanded=False):
@@ -180,19 +183,17 @@ with st.sidebar:
                     if not target_row.empty:
                         idx = target_row.index[0]
                         current_status = target_row.at[idx, "Status"]
-                        
                         if current_status == "未使用":
                             prize = target_row.at[idx, "Prize"]
-                            # 更新為 "持有中"
                             coupon_df.at[idx, "Status"] = "持有中"
-                            coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S") # 記錄領取時間
+                            coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
                             conn.update(worksheet="Coupons", data=coupon_df)
                             st.balloons()
                             st.toast(f"🎒 成功放入背包：{prize}")
                             conn.reset()
                             time.sleep(1); st.rerun()
                         elif current_status == "持有中":
-                            st.warning("🎒 這個獎品已經在你的背包裡囉！")
+                            st.warning("🎒 已經在背包裡囉！")
                         else:
                             st.error("❌ 已經使用過囉！")
                     else:
@@ -201,36 +202,44 @@ with st.sidebar:
                     st.error("請建立 Coupons 分頁")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. 🎒 我的背包展示區 (只顯示 "持有中")
+    # 2. 🎒 我的背包 (下拉選單 + 右側按鈕)
     st.markdown("### 🎒 我的背包")
     if not coupon_df.empty:
-        # 篩選出 "持有中" 的物品
+        # 篩選持有中的物品
         inventory = coupon_df[coupon_df["Status"] == "持有中"]
         
         if not inventory.empty:
-            for i, row in inventory.iterrows():
-                # 顯示卡片
-                st.markdown(f"""
-                <div class="backpack-card">
-                    <div class="backpack-title">🎁 {row['Prize']}</div>
-                    <div class="backpack-note">領取時間: {row['Date']}</div>
-                </div>
-                """, unsafe_allow_html=True)
+            # 製作選單選項： "獎品名稱 (領取日期)"
+            # 使用字典來對應 選項文字 -> 原始索引
+            item_map = {f"{row['Prize']} ({str(row['Date']).split(' ')[0]})": i for i, row in inventory.iterrows()}
+            
+            # 下拉式選單
+            selected_item_label = st.selectbox("選擇要使用的物品", list(item_map.keys()))
+            
+            if selected_item_label:
+                idx = item_map[selected_item_label]
+                row = coupon_df.loc[idx]
                 
-                # 使用按鈕
-                st.markdown('<div class="use-btn">', unsafe_allow_html=True)
-                if st.button(f"✨ 立即使用", key=f"use_{i}"):
-                    # 更新狀態為 "已使用"
-                    coupon_df.at[i, "Status"] = "已使用"
-                    # 更新日期為 "使用時間" (覆蓋掉領取時間，或是您想保留兩者也可以，這邊先覆蓋更新為使用時間)
-                    coupon_df.at[i, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
+                # 卡片呈現區塊 (左文 右鈕)
+                with st.container(border=True):
+                    c1, c2 = st.columns([2.2, 1]) # 左邊寬一點，右邊放按鈕
                     
-                    conn.update(worksheet="Coupons", data=coupon_df)
-                    st.toast(f"✅ 已使用：{row['Prize']}，享受吧！")
-                    st.balloons()
-                    conn.reset()
-                    time.sleep(1); st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+                    with c1:
+                        st.markdown(f"**🎁 {row['Prize']}**")
+                        st.caption(f"領取於: {row['Date']}")
+                        
+                    with c2:
+                        st.markdown('<div class="use-btn">', unsafe_allow_html=True)
+                        # 這邊是使用按鈕
+                        if st.button("✨ 使用", key=f"use_btn_{idx}"):
+                            coupon_df.at[idx, "Status"] = "已使用"
+                            coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
+                            conn.update(worksheet="Coupons", data=coupon_df)
+                            st.toast(f"✅ 已使用：{row['Prize']}")
+                            st.balloons()
+                            conn.reset()
+                            time.sleep(1); st.rerun()
+                        st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.caption("🎒 背包空空的，快去輸入代碼！")
     
