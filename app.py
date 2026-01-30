@@ -55,6 +55,8 @@ st.markdown("""
         border-radius: 12px !important;
         height: 50px !important;
     }
+    
+    /* 下拉選單 */
     div[data-baseweb="select"] > div {
         background-color: #fff9c4 !important;
         color: #000000 !important;
@@ -80,28 +82,36 @@ st.markdown("""
     .del-btn > button { background-color: #6c757d; color: white; }
     .gift-btn > button { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; }
     
-    /* 使用按鈕 (調整為適合卡片的高度) */
+    /* [修改] 使用按鈕 (配合右側佈局) */
     .use-btn > button { 
         background-color: #4CAF50 !important; 
         color: white !important; 
         height: 100% !important; 
-        min-height: 60px !important; /* 卡片模式下稍微矮一點 */
-        font-size: 18px !important;
+        min-height: 50px !important; /* 按鈕高度 */
+        font-size: 16px !important;
         margin-top: 0px !important;
         border-radius: 12px !important;
     }
     
+    /* [新增] 背包標題樣式 */
+    .backpack-item-title {
+        font-size: 20px !important;
+        font-weight: 900 !important;
+        color: #2E7D32 !important; /* 深綠色 */
+        margin-bottom: 5px !important;
+    }
+    
     /* 信件內容樣式 */
     .letter-box {
-        background-color: #fff;
-        border: 1px dashed #FF4B4B;
-        padding: 15px;
+        background-color: #fff9f0; /* 淡黃色信紙感 */
+        border: 2px dashed #FFB74D;
+        padding: 20px;
         border-radius: 10px;
-        font-family: 'Courier New', Courier, monospace;
-        line-height: 1.6;
-        color: #555;
-        margin-top: 10px;
-        white-space: pre-wrap;
+        font-size: 16px;
+        line-height: 1.8;
+        color: #5D4037;
+        white-space: pre-wrap; /* 保留換行 */
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
     }
 
     /* Toast 通知 */
@@ -214,7 +224,7 @@ if current_streak >= TARGET_STREAK:
                 time.sleep(2)
                 st.rerun()
 
-# --- 側邊欄 (清爽版) ---
+# --- 側邊欄 ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
     love_days = (taiwan_date - date(2019, 6, 15)).days
@@ -271,7 +281,7 @@ with c_b2: st.metric("剩餘血量", f"${remaining:,.0f}")
 with c_b3: st.metric("📅 今日可用", f"${daily_budget:,.0f}")
 st.write("---")
 
-# === 主畫面分頁設定 (4個分頁) ===
+# === 主畫面分頁 ===
 tab1, tab2, tab3, tab4 = st.tabs(["📝 記帳", "📊 分析", "📋 列表", "🎒 背包"])
 
 # === Tab 1: 記帳 ===
@@ -367,7 +377,7 @@ with tab3:
                             st.rerun()
     else: st.info("尚無資料")
 
-# === Tab 4: 背包 (移到這裡！) ===
+# === Tab 4: 背包 (列表式 + 展開內容) ===
 with tab4:
     st.subheader("🎒 我的背包")
     
@@ -406,16 +416,18 @@ with tab4:
         
     st.write("---")
 
-    # 2. 背包物品展示 (卡片式)
+    # 2. 背包物品列表展示
     if not coupon_df.empty:
         inventory = coupon_df[coupon_df["Status"] == "持有中"]
         if not inventory.empty:
             for i, row in inventory.iterrows():
-                # 使用 container 包裹每一個物品，看起來像一張票
+                # 每個物品一張卡片
                 with st.container(border=True):
-                    c1, c2 = st.columns([2.2, 1]) 
+                    # 上半部：標題 + 按鈕
+                    c1, c2 = st.columns([2.5, 1]) 
                     with c1:
-                        st.markdown(f"**🎁 {row['Prize']}**")
+                        # 使用 CSS class 加大標題
+                        st.markdown(f'<div class="backpack-item-title">🎁 {row["Prize"]}</div>', unsafe_allow_html=True)
                         st.caption(f"領取於: {row['Date']}")
                     with c2:
                         st.markdown('<div class="use-btn">', unsafe_allow_html=True)
@@ -429,10 +441,11 @@ with tab4:
                             time.sleep(1); st.rerun()
                         st.markdown('</div>', unsafe_allow_html=True)
                     
-                    # 展開內容 (如果有)
+                    # 下半部：展開信件 (如果有內容)
                     detail_content = str(row['Detail'])
                     if len(detail_content) > 1 and detail_content != "nan":
-                        with st.expander("📩 展開閱讀信件/內容"):
+                        # 這裡的 expander 會自動顯示在卡片下方
+                        with st.expander("💌 點擊閱讀信件內容"):
                             st.markdown(f'<div class="letter-box">{detail_content}</div>', unsafe_allow_html=True)
         else:
             st.info("🎒 背包目前空空的，快去輸入代碼或達成連勝成就！")
