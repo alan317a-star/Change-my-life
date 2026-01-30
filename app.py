@@ -33,64 +33,17 @@ def add_apple_touch_icon(image_path):
 
 add_apple_touch_icon("icon.png")
 
-# --- CSS 優化 (iOS 穩定白底版) ---
+# --- CSS 優化 ---
 st.markdown("""
     <style>
-    /* ============================================================
-       🔥 iOS 側邊欄按鈕 - 實體白底修復方案
-       ============================================================ */
+    /* 隱藏 Streamlit 預設元素 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header[data-testid="stHeader"] {background-color: rgba(0,0,0,0); z-index: 999;}
     
-    /* 1. 恢復 Header 為實心白色，確保觸控區域有效 */
-    header[data-testid="stHeader"] {
-        background-color: #ffffff !important; /* 實心白 */
-        border-bottom: 1px solid #f0f0f0 !important; /* 淡淡的底線 */
-        height: 3.5rem !important;
-        z-index: 100000 !important;
-        display: block !important;
-        visibility: visible !important;
-    }
-
-    /* 2. 強制顯示左上角「>」按鈕，並設為黑色 */
-    [data-testid="collapsedControl"] {
-        display: block !important;
-        visibility: visible !important;
-        color: #000000 !important; /* 黑色 */
-        z-index: 100001 !important;
-    }
-    
-    /* 3. 確保按鈕內的箭頭圖示也是黑色 */
-    [data-testid="collapsedControl"] svg {
-        fill: #000000 !important;
-        stroke: #000000 !important;
-    }
-
-    /* 4. 隱藏右上角 Toolbar (三點選單、Deploy) */
-    [data-testid="stToolbar"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    /* 5. 隱藏頂部彩虹裝飾線 */
-    [data-testid="stDecoration"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
-
-    /* =================================
-       📱 其他介面優化
-       ================================= */
-    
-    /* 隱藏 Footer */
-    footer { display: none !important; }
-    
-    /* 隱藏右下角浮水印 */
-    [data-testid="stStatusWidget"] { display: none !important; }
-    .viewerBadge_container__1QSob { display: none !important; }
-    #MainMenu { display: none !important; }
-    
-    /* 內容往下推，避免被 Header 擋住 */
+    /* 手機版面調整 */
     .block-container {
-        padding-top: 4rem !important; 
+        padding-top: 3rem !important; 
         padding-bottom: 5rem !important;
     }
     
@@ -140,7 +93,7 @@ st.markdown("""
         border-radius: 12px !important;
     }
     
-    /* 背包標題 */
+    /* 背包標題樣式 (綠色-持有中) */
     .backpack-item-title {
         font-size: 20px !important;
         font-weight: 900 !important;
@@ -148,7 +101,7 @@ st.markdown("""
         margin-bottom: 5px !important;
     }
     
-    /* 歷史標題 */
+    /* 歷史標題樣式 (灰色-已使用) */
     .history-item-title {
         font-size: 18px !important;
         font-weight: bold !important;
@@ -157,7 +110,7 @@ st.markdown("""
         margin-bottom: 5px !important;
     }
     
-    /* 信件內容 */
+    /* 信件內容樣式 */
     .letter-box {
         background-color: #fff9f0;
         border: 2px dashed #FFB74D;
@@ -249,7 +202,7 @@ def calculate_streak(df):
 
 current_streak = calculate_streak(df)
 
-# --- 🏆 自動發獎系統 ---
+# --- 🏆 自動發獎系統 (21天) ---
 TARGET_STREAK = 21 
 ACHIEVEMENT_CODE = f"ACHIEVE_{TARGET_STREAK}DAYS" 
 
@@ -346,185 +299,4 @@ with tab1:
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1: date_val = st.date_input("📅 日期", taiwan_date)
-        with col2: cat_val = st.selectbox("📂 分類", ["🍔 飲食 (三餐/飲料)", "🛒 日用 (超市/藥妝)", "🚗 交通 (車票/加油)", "🏠 居家 (房貸/水電)", "👗 服飾 (衣物/鞋包)", "💆‍♂️ 醫療 (看診/藥品)", "🎮 娛樂 (旅遊/遊戲)", "📚 教育 (書籍/課程)", "💼 保險稅務", "👶 子女 (尿布/學費)", "💸 其他"])
-        amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
-        note_val = st.text_input("📝 備註")
-        st.markdown('<div class="save-btn">', unsafe_allow_html=True)
-        submitted = st.form_submit_button("💾 確認儲存")
-        st.markdown('</div>', unsafe_allow_html=True)
-        if submitted:
-            if amount_val > 0:
-                try:
-                    raw_df = conn.read(worksheet="Expenses", ttl=0)
-                    if raw_df.empty: raw_df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
-                    new_row = pd.DataFrame([{
-                        "Date": f"{date_val} {taiwan_now.strftime('%H:%M:%S')}", 
-                        "Category": cat_val, 
-                        "Amount": amount_val, 
-                        "Note": note_val
-                    }])
-                    final_df = pd.concat([raw_df, new_row], ignore_index=True)
-                    if "User" in final_df.columns: final_df = final_df.drop(columns=["User"])
-                    conn.update(worksheet="Expenses", data=final_df)
-                    st.toast("✨ 記帳完成！")
-                    conn.reset()
-                    time.sleep(1); st.rerun()
-                except Exception as e: st.error(f"錯誤：{e}")
-
-    with st.expander("記錯帳按這邊 (快速復原)", expanded=False):
-        st.markdown('<div class="del-btn">', unsafe_allow_html=True)
-        if st.button("↩️ 刪除最後一筆紀錄 (Undo)"):
-            try:
-                raw_df = conn.read(worksheet="Expenses", ttl=0)
-                if not raw_df.empty:
-                    conn.update(worksheet="Expenses", data=raw_df.iloc[:-1])
-                    st.toast("已刪除最後一筆紀錄")
-                    conn.reset()
-                    time.sleep(1); st.rerun()
-                else: st.warning("無紀錄可刪")
-            except Exception as e: st.error(f"刪除失敗: {e}")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# === Tab 2: 分析 ===
-with tab2:
-    if not df.empty:
-        selected_month = st.selectbox("🗓️ 選擇月份", ["全部"] + sorted(df["Month"].dropna().unique(), reverse=True))
-        plot_df = df if selected_month == "全部" else df[df["Month"] == selected_month]
-        st.metric(f"總支出", f"${plot_df['Amount'].sum():,.0f}")
-        if not plot_df.empty:
-            fig = px.pie(plot_df.groupby("Category")["Amount"].sum().reset_index(), values="Amount", names="Category", hole=0.4)
-            st.plotly_chart(fig, use_container_width=True)
-    else: st.info("尚無資料")
-
-# === Tab 3: 列表 ===
-with tab3:
-    st.subheader("📋 最近紀錄")
-    if not df.empty:
-        df_display = df.copy()
-        df_display['orig_idx'] = df_display.index
-        df_display = df_display.sort_values("Date", ascending=False).head(20)
-        for _, row in df_display.iterrows():
-            with st.container(border=True):
-                c1, c2, c3 = st.columns([3, 1.5, 1.1])
-                with c1:
-                    st.markdown(f'<div class="card-title">{row["Category"]}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="card-note">{row["Date"]} | {row["Note"]}</div>', unsafe_allow_html=True)
-                with c2: st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
-                with c3:
-                    if st.session_state["delete_verify_idx"] == row['orig_idx']:
-                        sub_c1, sub_c2 = st.columns(2)
-                        with sub_c1:
-                            if st.button("✅", key=f"conf_{row['orig_idx']}", type="primary"):
-                                try:
-                                    fresh_df = conn.read(worksheet="Expenses", ttl=0)
-                                    conn.update(worksheet="Expenses", data=fresh_df.drop(row['orig_idx']))
-                                    st.toast("🗑️ 已成功刪除")
-                                    st.session_state["delete_verify_idx"] = None
-                                    conn.reset()
-                                    time.sleep(1); st.rerun()
-                                except Exception as e: st.error(f"失敗：{e}")
-                        with sub_c2:
-                            if st.button("❌", key=f"cancel_{row['orig_idx']}"):
-                                st.session_state["delete_verify_idx"] = None
-                                st.rerun()
-                    else:
-                        if st.button("🗑️", key=f"del_{row['orig_idx']}"):
-                            st.session_state["delete_verify_idx"] = row['orig_idx']
-                            st.rerun()
-    else: st.info("尚無資料")
-
-# === Tab 4: 背包 (完整版) ===
-with tab4:
-    st.subheader("🎒 我的背包")
-    
-    # 1. 兌換輸入區
-    with st.expander("➕ 輸入代碼領取獎品", expanded=False):
-        coupon_code = st.text_input("輸入代碼", key="coupon_input")
-        st.markdown('<div class="gift-btn">', unsafe_allow_html=True)
-        if st.button("🎁 領取"):
-            if coupon_code:
-                if not coupon_df.empty:
-                    coupon_df["Code"] = coupon_df["Code"].astype(str).str.strip()
-                    input_code = coupon_code.strip()
-                    target_row = coupon_df[coupon_df["Code"] == input_code]
-                    
-                    if not target_row.empty:
-                        idx = target_row.index[0]
-                        current_status = target_row.at[idx, "Status"]
-                        if current_status in ["未使用", "待發送"]:
-                            prize = target_row.at[idx, "Prize"]
-                            coupon_df.at[idx, "Status"] = "持有中"
-                            coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
-                            conn.update(worksheet="Coupons", data=coupon_df)
-                            st.balloons()
-                            st.toast(f"🎒 成功放入背包：{prize}")
-                            conn.reset()
-                            time.sleep(1); st.rerun()
-                        elif current_status == "持有中":
-                            st.warning("🎒 已經在背包裡囉！")
-                        else:
-                            st.error("❌ 已經使用過囉！")
-                    else:
-                        st.error("❓ 代碼錯誤")
-                else:
-                    st.error("請建立 Coupons 分頁")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-    st.write("---")
-
-    # 2. 背包物品列表展示 (持有中)
-    if not coupon_df.empty:
-        inventory = coupon_df[coupon_df["Status"] == "持有中"]
-        if not inventory.empty:
-            for i, row in inventory.iterrows():
-                with st.container(border=True):
-                    c1, c2 = st.columns([2.5, 1]) 
-                    with c1:
-                        st.markdown(f'<div class="backpack-item-title">🎁 {row["Prize"]}</div>', unsafe_allow_html=True)
-                        st.caption(f"領取於: {row['Date']}")
-                    with c2:
-                        st.markdown('<div class="use-btn">', unsafe_allow_html=True)
-                        if st.button("✨ 使用", key=f"use_btn_{i}"):
-                            coupon_df.at[i, "Status"] = "已使用"
-                            coupon_df.at[i, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
-                            conn.update(worksheet="Coupons", data=coupon_df)
-                            st.toast(f"✅ 已使用：{row['Prize']}")
-                            st.balloons()
-                            conn.reset()
-                            time.sleep(1); st.rerun()
-                        st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    detail_content = str(row['Detail'])
-                    if len(detail_content) > 1 and detail_content != "nan":
-                        with st.expander("💌 點擊閱讀信件內容"):
-                            st.markdown(f'<div class="letter-box">{detail_content}</div>', unsafe_allow_html=True)
-        else:
-            st.info("🎒 背包目前空空的，快去輸入代碼或達成連勝成就！")
-
-    # 3. 歷史紀錄 (已使用)
-    st.write("---")
-    st.subheader("📜 歷史兌換紀錄")
-    
-    if not coupon_df.empty:
-        history = coupon_df[coupon_df["Status"] == "已使用"]
-        if not history.empty:
-            history = history.sort_values("Date", ascending=False)
-            for i, row in history.iterrows():
-                with st.container(border=True):
-                    st.markdown(f'<div class="history-item-title">{row["Prize"]}</div>', unsafe_allow_html=True)
-                    st.caption(f"使用於: {row['Date']}")
-                    
-                    detail_content = str(row['Detail'])
-                    if len(detail_content) > 1 and detail_content != "nan":
-                        with st.expander("💌 回顧信件"):
-                            st.markdown(f'<div class="letter-box" style="background-color:#f0f0f0; border-color:#aaa;">{detail_content}</div>', unsafe_allow_html=True)
-        else:
-            st.caption("尚無歷史紀錄")
-
-# --- Footer ---
-st.write("---")
-st.markdown("""
-    <div class="footer">
-        作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
-    </div>
-""", unsafe_allow_html=True)
+        with col
