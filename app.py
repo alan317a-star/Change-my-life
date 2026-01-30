@@ -55,8 +55,6 @@ st.markdown("""
         border-radius: 12px !important;
         height: 50px !important;
     }
-    
-    /* 下拉選單 */
     div[data-baseweb="select"] > div {
         background-color: #fff9c4 !important;
         color: #000000 !important;
@@ -82,12 +80,12 @@ st.markdown("""
     .del-btn > button { background-color: #6c757d; color: white; }
     .gift-btn > button { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; }
     
-    /* 使用按鈕 */
+    /* 使用按鈕 (調整為適合卡片的高度) */
     .use-btn > button { 
         background-color: #4CAF50 !important; 
         color: white !important; 
         height: 100% !important; 
-        min-height: 80px !important;
+        min-height: 60px !important; /* 卡片模式下稍微矮一點 */
         font-size: 18px !important;
         margin-top: 0px !important;
         border-radius: 12px !important;
@@ -169,7 +167,6 @@ def calculate_streak(df):
     
     if len(dates) == 0: return 0
     
-    # 從最新的日期開始往回數
     if dates[-1] != taiwan_date and dates[-1] != (taiwan_date - timedelta(days=1)):
         return 0
         
@@ -186,17 +183,18 @@ def calculate_streak(df):
 
 current_streak = calculate_streak(df)
 
-# --- 🏆 [更新] 自動發獎系統 (設定為 21 天) ---
-TARGET_STREAK = 21  # <--- 已修改為 21 天
+# --- 🏆 自動發獎系統 ---
+TARGET_STREAK = 21 
 ACHIEVEMENT_CODE = f"ACHIEVE_{TARGET_STREAK}DAYS" 
 
 try:
+    # 讀取 Coupons
     coupon_df = conn.read(worksheet="Coupons", ttl=0)
     if "Detail" not in coupon_df.columns: coupon_df["Detail"] = ""
 except:
     coupon_df = pd.DataFrame(columns=["Code", "Prize", "Detail", "Status", "Date"])
 
-# 檢查連勝是否達成
+# 檢查連勝發獎
 if current_streak >= TARGET_STREAK:
     if not coupon_df.empty:
         coupon_df["Code"] = coupon_df["Code"].astype(str).str.strip()
@@ -206,123 +204,33 @@ if current_streak >= TARGET_STREAK:
             idx = target_indices[0] 
             current_status = coupon_df.at[idx, "Status"]
             
-            # 只有當狀態是 "待發送" 時，才進行解鎖
             if current_status == "待發送":
-                coupon_df.at[idx, "Status"] = "持有中" # 放入背包
+                coupon_df.at[idx, "Status"] = "持有中" 
                 coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
-                
                 conn.update(worksheet="Coupons", data=coupon_df)
                 prize_name = coupon_df.at[idx, "Prize"]
-                
                 st.balloons()
                 st.toast(f"🎉 恭喜達成 {TARGET_STREAK} 天連勝！\n獲得：{prize_name}")
                 time.sleep(2)
                 st.rerun()
 
-# --- 側邊欄 ---
+# --- 側邊欄 (清爽版) ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
-    # 1. 戀愛天數
     love_days = (taiwan_date - date(2019, 6, 15)).days
     if love_days > 0: st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
     
-    # 2. 寶寶倒數
     baby_days = (taiwan_date - date(2025, 9, 12)).days
     if baby_days > 0: st.success(f"👶 承淅來到地球 **{baby_days}** 天囉！")
     elif baby_days == 0: st.success("🎂 就是今天！寶寶誕生啦！")
     else: st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
 
-    # 3. 連勝天數
     st.metric("🔥 記帳連勝", f"{current_streak} 天")
-    if current_streak >= TARGET_STREAK:
-        st.caption(f"✨ 已達成 {TARGET_STREAK} 天目標！")
-    else:
-        st.caption(f"目標: {TARGET_STREAK} 天，加油！")
+    if current_streak >= TARGET_STREAK: st.caption(f"✨ 已達成 {TARGET_STREAK} 天目標！")
+    else: st.caption(f"目標: {TARGET_STREAK} 天，加油！")
 
     st.write("---")
-
-    # ==========================================
-    # 🎒 驚喜背包系統
-    # ==========================================
-    
-    # 1. 兌換輸入區
-    with st.expander("🎁 輸入代碼領取獎品", expanded=False):
-        coupon_code = st.text_input("輸入代碼", key="coupon_input")
-        st.markdown('<div class="gift-btn">', unsafe_allow_html=True)
-        if st.button("🎁 領取到背包"):
-            if coupon_code:
-                if not coupon_df.empty:
-                    coupon_df["Code"] = coupon_df["Code"].astype(str).str.strip()
-                    input_code = coupon_code.strip()
-                    target_row = coupon_df[coupon_df["Code"] == input_code]
-                    
-                    if not target_row.empty:
-                        idx = target_row.index[0]
-                        current_status = target_row.at[idx, "Status"]
-                        # 允許領取 "未使用" (一般代碼) 或 "待發送" (如果使用者手動輸入成就代碼)
-                        if current_status in ["未使用", "待發送"]:
-                            prize = target_row.at[idx, "Prize"]
-                            coupon_df.at[idx, "Status"] = "持有中"
-                            coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
-                            conn.update(worksheet="Coupons", data=coupon_df)
-                            st.balloons()
-                            st.toast(f"🎒 成功放入背包：{prize}")
-                            conn.reset()
-                            time.sleep(1); st.rerun()
-                        elif current_status == "持有中":
-                            st.warning("🎒 已經在背包裡囉！")
-                        else:
-                            st.error("❌ 已經使用過囉！")
-                    else:
-                        st.error("❓ 代碼錯誤")
-                else:
-                    st.error("請建立 Coupons 分頁")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # 2. 🎒 我的背包
-    st.markdown("### 🎒 我的背包")
-    if not coupon_df.empty:
-        inventory = coupon_df[coupon_df["Status"] == "持有中"]
-        
-        if not inventory.empty:
-            item_map = {f"{row['Prize']} ({str(row['Date']).split(' ')[0]})": i for i, row in inventory.iterrows()}
-            placeholder_text = "👇 請選擇物品..."
-            options = [placeholder_text] + list(item_map.keys())
-            selected_item_label = st.selectbox("選擇要使用的物品", options)
-            
-            if selected_item_label != placeholder_text:
-                idx = item_map[selected_item_label]
-                row = coupon_df.loc[idx]
-                
-                with st.container(border=True):
-                    c1, c2 = st.columns([2.2, 1]) 
-                    with c1:
-                        st.markdown(f"**🎁 {row['Prize']}**")
-                        st.caption(f"領取於: {row['Date']}")
-                    with c2:
-                        st.markdown('<div class="use-btn">', unsafe_allow_html=True)
-                        if st.button("✨ 使用", key=f"use_btn_{idx}"):
-                            coupon_df.at[idx, "Status"] = "已使用"
-                            coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
-                            conn.update(worksheet="Coupons", data=coupon_df)
-                            st.toast(f"✅ 已使用：{row['Prize']}")
-                            st.balloons()
-                            conn.reset()
-                            time.sleep(1); st.rerun()
-                        st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    detail_content = str(row['Detail'])
-                    if len(detail_content) > 1 and detail_content != "nan":
-                        with st.expander("📩 展開閱讀信件/內容"):
-                            st.markdown(f'<div class="letter-box">{detail_content}</div>', unsafe_allow_html=True)
-
-        else:
-            st.caption("🎒 背包空空的，快去輸入代碼！")
-    
-    st.write("---")
-
     st.header("📊 帳務概況")
-    current_spent = df[df["Month"] == current_month_str]["Amount"].sum() if not df.empty else 0
     st.metric(label="💸 本月已花費", value=f"${current_spent:,.0f}")
     
     st.write("") 
@@ -339,7 +247,6 @@ with st.sidebar:
         st.info(f"{query_label}: **${query_amount:,.0f}**")
     
     st.write("---")
-    
     st.header("💰 錢包狀態")
     monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
 
@@ -364,7 +271,8 @@ with c_b2: st.metric("剩餘血量", f"${remaining:,.0f}")
 with c_b3: st.metric("📅 今日可用", f"${daily_budget:,.0f}")
 st.write("---")
 
-tab1, tab2, tab3 = st.tabs(["📝 記帳", "📊 分析", "📋 列表"])
+# === 主畫面分頁設定 (4個分頁) ===
+tab1, tab2, tab3, tab4 = st.tabs(["📝 記帳", "📊 分析", "📋 列表", "🎒 背包"])
 
 # === Tab 1: 記帳 ===
 with tab1:
@@ -390,8 +298,7 @@ with tab1:
                         "Note": note_val
                     }])
                     final_df = pd.concat([raw_df, new_row], ignore_index=True)
-                    if "User" in final_df.columns:
-                        final_df = final_df.drop(columns=["User"])
+                    if "User" in final_df.columns: final_df = final_df.drop(columns=["User"])
                     conn.update(worksheet="Expenses", data=final_df)
                     st.toast("✨ 記帳完成！")
                     conn.reset()
@@ -459,6 +366,78 @@ with tab3:
                             st.session_state["delete_verify_idx"] = row['orig_idx']
                             st.rerun()
     else: st.info("尚無資料")
+
+# === Tab 4: 背包 (移到這裡！) ===
+with tab4:
+    st.subheader("🎒 我的背包")
+    
+    # 1. 兌換輸入區
+    with st.expander("➕ 輸入代碼領取獎品", expanded=False):
+        coupon_code = st.text_input("輸入代碼", key="coupon_input")
+        st.markdown('<div class="gift-btn">', unsafe_allow_html=True)
+        if st.button("🎁 領取"):
+            if coupon_code:
+                if not coupon_df.empty:
+                    coupon_df["Code"] = coupon_df["Code"].astype(str).str.strip()
+                    input_code = coupon_code.strip()
+                    target_row = coupon_df[coupon_df["Code"] == input_code]
+                    
+                    if not target_row.empty:
+                        idx = target_row.index[0]
+                        current_status = target_row.at[idx, "Status"]
+                        if current_status in ["未使用", "待發送"]:
+                            prize = target_row.at[idx, "Prize"]
+                            coupon_df.at[idx, "Status"] = "持有中"
+                            coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
+                            conn.update(worksheet="Coupons", data=coupon_df)
+                            st.balloons()
+                            st.toast(f"🎒 成功放入背包：{prize}")
+                            conn.reset()
+                            time.sleep(1); st.rerun()
+                        elif current_status == "持有中":
+                            st.warning("🎒 已經在背包裡囉！")
+                        else:
+                            st.error("❌ 已經使用過囉！")
+                    else:
+                        st.error("❓ 代碼錯誤")
+                else:
+                    st.error("請建立 Coupons 分頁")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    st.write("---")
+
+    # 2. 背包物品展示 (卡片式)
+    if not coupon_df.empty:
+        inventory = coupon_df[coupon_df["Status"] == "持有中"]
+        if not inventory.empty:
+            for i, row in inventory.iterrows():
+                # 使用 container 包裹每一個物品，看起來像一張票
+                with st.container(border=True):
+                    c1, c2 = st.columns([2.2, 1]) 
+                    with c1:
+                        st.markdown(f"**🎁 {row['Prize']}**")
+                        st.caption(f"領取於: {row['Date']}")
+                    with c2:
+                        st.markdown('<div class="use-btn">', unsafe_allow_html=True)
+                        if st.button("✨ 使用", key=f"use_btn_{i}"):
+                            coupon_df.at[i, "Status"] = "已使用"
+                            coupon_df.at[i, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
+                            conn.update(worksheet="Coupons", data=coupon_df)
+                            st.toast(f"✅ 已使用：{row['Prize']}")
+                            st.balloons()
+                            conn.reset()
+                            time.sleep(1); st.rerun()
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # 展開內容 (如果有)
+                    detail_content = str(row['Detail'])
+                    if len(detail_content) > 1 and detail_content != "nan":
+                        with st.expander("📩 展開閱讀信件/內容"):
+                            st.markdown(f'<div class="letter-box">{detail_content}</div>', unsafe_allow_html=True)
+        else:
+            st.info("🎒 背包目前空空的，快去輸入代碼或達成連勝成就！")
+    else:
+        st.caption("尚無資料")
 
 # --- Footer ---
 st.write("---")
