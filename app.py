@@ -82,35 +82,44 @@ st.markdown("""
     .del-btn > button { background-color: #6c757d; color: white; }
     .gift-btn > button { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; }
     
-    /* [修改] 使用按鈕 (配合右側佈局) */
+    /* 使用按鈕 */
     .use-btn > button { 
         background-color: #4CAF50 !important; 
         color: white !important; 
         height: 100% !important; 
-        min-height: 50px !important; /* 按鈕高度 */
+        min-height: 50px !important; 
         font-size: 16px !important;
         margin-top: 0px !important;
         border-radius: 12px !important;
     }
     
-    /* [新增] 背包標題樣式 */
+    /* 背包標題樣式 (綠色-持有中) */
     .backpack-item-title {
         font-size: 20px !important;
         font-weight: 900 !important;
-        color: #2E7D32 !important; /* 深綠色 */
+        color: #2E7D32 !important; 
+        margin-bottom: 5px !important;
+    }
+    
+    /* [新增] 歷史標題樣式 (灰色-已使用) */
+    .history-item-title {
+        font-size: 18px !important;
+        font-weight: bold !important;
+        color: #757575 !important; /* 灰色 */
+        text-decoration: line-through; /* 刪除線效果 */
         margin-bottom: 5px !important;
     }
     
     /* 信件內容樣式 */
     .letter-box {
-        background-color: #fff9f0; /* 淡黃色信紙感 */
+        background-color: #fff9f0;
         border: 2px dashed #FFB74D;
         padding: 20px;
         border-radius: 10px;
         font-size: 16px;
         line-height: 1.8;
         color: #5D4037;
-        white-space: pre-wrap; /* 保留換行 */
+        white-space: pre-wrap; 
         box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
     }
 
@@ -198,7 +207,7 @@ TARGET_STREAK = 21
 ACHIEVEMENT_CODE = f"ACHIEVE_{TARGET_STREAK}DAYS" 
 
 try:
-    # 讀取 Coupons
+    # 讀取 Coupons (容錯處理)
     coupon_df = conn.read(worksheet="Coupons", ttl=0)
     if "Detail" not in coupon_df.columns: coupon_df["Detail"] = ""
 except:
@@ -377,7 +386,7 @@ with tab3:
                             st.rerun()
     else: st.info("尚無資料")
 
-# === Tab 4: 背包 (列表式 + 展開內容) ===
+# === Tab 4: 背包 (完整版) ===
 with tab4:
     st.subheader("🎒 我的背包")
     
@@ -416,7 +425,7 @@ with tab4:
         
     st.write("---")
 
-    # 2. 背包物品列表展示
+    # 2. 背包物品列表展示 (持有中)
     if not coupon_df.empty:
         inventory = coupon_df[coupon_df["Status"] == "持有中"]
         if not inventory.empty:
@@ -426,7 +435,6 @@ with tab4:
                     # 上半部：標題 + 按鈕
                     c1, c2 = st.columns([2.5, 1]) 
                     with c1:
-                        # 使用 CSS class 加大標題
                         st.markdown(f'<div class="backpack-item-title">🎁 {row["Prize"]}</div>', unsafe_allow_html=True)
                         st.caption(f"領取於: {row['Date']}")
                     with c2:
@@ -444,18 +452,30 @@ with tab4:
                     # 下半部：展開信件 (如果有內容)
                     detail_content = str(row['Detail'])
                     if len(detail_content) > 1 and detail_content != "nan":
-                        # 這裡的 expander 會自動顯示在卡片下方
                         with st.expander("💌 點擊閱讀信件內容"):
                             st.markdown(f'<div class="letter-box">{detail_content}</div>', unsafe_allow_html=True)
         else:
             st.info("🎒 背包目前空空的，快去輸入代碼或達成連勝成就！")
-    else:
-        st.caption("尚無資料")
 
-# --- Footer ---
-st.write("---")
-st.markdown("""
-    <div class="footer">
-        作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
-    </div>
-""", unsafe_allow_html=True)
+    # 3. 歷史紀錄 (已使用)
+    st.write("---")
+    st.subheader("📜 歷史兌換紀錄")
+    
+    if not coupon_df.empty:
+        history = coupon_df[coupon_df["Status"] == "已使用"]
+        if not history.empty:
+            # 倒序排列 (最新的在最上面)
+            history = history.sort_values("Date", ascending=False)
+            
+            for i, row in history.iterrows():
+                with st.container(border=True):
+                    st.markdown(f'<div class="history-item-title">{row["Prize"]}</div>', unsafe_allow_html=True)
+                    st.caption(f"使用於: {row['Date']}")
+                    
+                    # 歷史紀錄也可以看信
+                    detail_content = str(row['Detail'])
+                    if len(detail_content) > 1 and detail_content != "nan":
+                        with st.expander("💌 回顧信件"):
+                            st.markdown(f'<div class="letter-box" style="background-color:#f0f0f0; border-color:#aaa;">{detail_content}</div>', unsafe_allow_html=True)
+        else:
+            st.caption("尚無歷史紀錄")
