@@ -1,60 +1,42 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 from datetime import date, datetime, timedelta
 import calendar
 import time
 import random
-import base64
-import os
 
 # --- 1. 頁面設定 ---
 st.set_page_config(
     page_title="Everyday Moments", 
-    page_icon="icon.png", # 讀取您的貓咪圖示
+    page_icon="icon.png", # 確保您有上傳 icon.png，否則請改回 "💰"
     layout="centered",
-    initial_sidebar_state="expanded" # <--- 關鍵！設定為 expanded，左側欄位就會自動出現
+    initial_sidebar_state="collapsed" # 手機版建議預設收起，讓畫面乾淨，需要時再點箭頭打開
 )
 
-# --- 🍎 專治 iPhone 主畫面圖示 (Base64 強制注入法) ---
-def add_apple_touch_icon(image_path):
-    try:
-        if os.path.exists(image_path):
-            with open(image_path, "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read()).decode()
-            apple_touch_icon_html = f"""
-            <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,{encoded_string}">
-            <link rel="icon" type="image/png" href="data:image/png;base64,{encoded_string}">
-            """
-            st.markdown(apple_touch_icon_html, unsafe_allow_html=True)
-    except Exception as e:
-        pass
-
-add_apple_touch_icon("icon.png")
-
-# --- CSS 優化 (確保側邊欄按鈕好點擊) ---
+# --- CSS 極致 APP 化美化 (修正側邊欄按鈕問題) ---
 st.markdown("""
     <style>
     /* === 1. 隱藏 Streamlit 預設元素 === */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;} /* 隱藏右上角三個點點選單 */
+    footer {visibility: hidden;}    /* 隱藏底部 Made with Streamlit */
     
-    /* [重要] 設定 Header 背景透明，但保留按鈕互動 */
+    /* [修正] 不要完全隱藏 header，改為背景透明 */
+    /* 這樣左上角的「>」側邊欄按鈕才會出現 */
     header[data-testid="stHeader"] {
         background-color: rgba(0,0,0,0); 
-        z-index: 999; /* 確保按鈕在最上層 */
+        z-index: 1;
     }
     
-    /* 調整側邊欄的寬度與樣式 (選擇性) */
-    section[data-testid="stSidebar"] {
-        background-color: #f8f9fa; /* 讓側邊欄有個淡淡的背景色，區隔更明顯 */
+    /* 隱藏頂部的彩色橫條裝飾 */
+    .stApp > header {
+        background-color: transparent;
     }
-
+    
     /* === 2. 手機版面調整 === */
     .block-container {
-        padding-top: 3rem !important; 
+        padding-top: 3rem !important; /* 留一點空間給頂部的側邊欄按鈕 */
         padding-bottom: 5rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
@@ -113,6 +95,7 @@ st.markdown("""
     /* === 5. 其他元件優化 === */
     .game-status { font-size: 20px; font-weight: bold; margin-bottom: 5px; text-align: center; }
     
+    /* Toast 通知 */
     div[data-testid="stToast"] { 
         top: 10% !important; 
         left: 50% !important; 
@@ -125,10 +108,12 @@ st.markdown("""
     }
     div[data-testid="stToast"] * { font-size: 18px !important; color: #000000 !important; }
     
+    /* 卡片樣式 */
     .card-title { font-size: 19px; font-weight: bold; color: #2196F3 !important; margin-bottom: 2px; }
     .card-note { font-size: 14px; color: inherit; opacity: 0.8; }
     .card-amount { font-size: 20px; font-weight: bold; color: #FF4B4B; text-align: right; line-height: 1.5; }
     
+    /* 金句樣式 */
     .quote-box { background-color: #f0f2f6; border-left: 5px solid #FF4B4B; padding: 12px; margin-bottom: 15px; border-radius: 8px; font-style: italic; color: #555; text-align: center; font-size: 15px; }
     .footer { text-align: center; font-size: 12px; color: #cccccc; margin-top: 30px; margin-bottom: 20px; font-family: sans-serif; }
     </style>
@@ -140,7 +125,7 @@ if "delete_verify_idx" not in st.session_state:
 
 st.title("Everyday Moments")
 
-# --- 隨機勉勵短語 ---
+# --- 隨機勉勵短語 (固定 Session) ---
 if "current_quote" not in st.session_state:
     quotes = [
         "🌱 每一筆省下的錢，都是未來的自由。", "💪 記帳不是為了省錢，而是為了更聰明地花錢。", "✨ 今天的自律，是為了明天的選擇權。",
@@ -160,7 +145,7 @@ st.markdown(f'<div class="quote-box">{st.session_state["current_quote"]}</div>',
 # --- 連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 讀取資料 ---
+# --- 讀取資料 (極速快取模式) ---
 try:
     df = conn.read(worksheet="Expenses", ttl=600)
     if df.empty:
@@ -187,9 +172,8 @@ if not df.empty:
     last_month_str = last_month_end.strftime("%Y-%m")
     last_month_spent = df[df["Month"] == last_month_str]["Amount"].sum()
 
-# --- 側邊欄 (設定為展開，並放入內容) ---
+# --- 側邊欄 (預設收起，按箭頭打開) ---
 with st.sidebar:
-    # 1. 重要時刻
     st.header("⏳ 重要時刻")
     love_days = (taiwan_date - date(2019, 6, 15)).days
     if love_days > 0: st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
@@ -197,10 +181,8 @@ with st.sidebar:
     if baby_days > 0: st.success(f"👶 承淅來到地球 **{baby_days}** 天囉！")
     elif baby_days == 0: st.success("🎂 就是今天！寶寶誕生啦！")
     else: st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
-    
     st.write("---")
 
-    # 2. 帳務概況
     st.header("📊 帳務概況")
     diff = current_spent - last_month_spent
     delta_label = f"比上月{'多' if diff > 0 else '少'}花 ${abs(diff):,.0f}"
@@ -219,10 +201,8 @@ with st.sidebar:
             query_label = f"{selected_query} 總支出"
         st.info(f"{query_label}: **${query_amount:,.0f}**")
     else: st.caption("尚無歷史資料")
-    
     st.write("---")
     
-    # 3. 錢包狀態
     st.header("💰 錢包狀態")
     monthly_budget = st.number_input("本月預算 (血量)", value=30000, step=1000)
 
@@ -266,15 +246,19 @@ with tab1:
                 try:
                     raw_df = conn.read(worksheet="Expenses", ttl=0)
                     if raw_df.empty: raw_df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
+                    
                     new_row = pd.DataFrame([{
                         "Date": f"{date_val} {taiwan_now.strftime('%H:%M:%S')}", 
                         "Category": cat_val, 
                         "Amount": amount_val, 
                         "Note": note_val
                     }])
+                    
+                    # 確保沒有 User 欄位 (相容舊版)
                     final_df = pd.concat([raw_df, new_row], ignore_index=True)
                     if "User" in final_df.columns:
                         final_df = final_df.drop(columns=["User"])
+
                     conn.update(worksheet="Expenses", data=final_df)
                     st.toast("✨ 記帳完成！")
                     conn.reset()
