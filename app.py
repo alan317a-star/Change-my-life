@@ -161,25 +161,21 @@ current_spent = df[df["Month"] == current_month_str]["Amount"].sum() if not df.e
 last_month_end = taiwan_date.replace(day=1) - timedelta(days=1)
 last_month_spent = df[df["Month"] == last_month_end.strftime("%Y-%m")]["Amount"].sum() if not df.empty else 0
 
-# --- 🔥 [核心功能] 連勝計算邏輯 ---
+# --- 🔥 連勝計算邏輯 ---
 def calculate_streak(df):
     if df.empty: return 0
-    # 取出所有有記帳的日期 (去重)
     dates = df["Date_dt"].dt.date.dropna().unique()
     dates.sort()
     
     if len(dates) == 0: return 0
     
-    streak = 0
     # 從最新的日期開始往回數
-    # 如果最新的日期不是今天也不是昨天，代表連勝已斷，直接回傳 0 (或只保留今天的 1)
     if dates[-1] != taiwan_date and dates[-1] != (taiwan_date - timedelta(days=1)):
         return 0
         
     check_date = dates[-1]
     streak = 1
     
-    # 往回檢查
     for i in range(len(dates)-2, -1, -1):
         if dates[i] == check_date - timedelta(days=1):
             streak += 1
@@ -190,10 +186,9 @@ def calculate_streak(df):
 
 current_streak = calculate_streak(df)
 
-# --- 🏆 [核心功能] 自動發獎系統 ---
-# 設定條件：連勝 X 天
-TARGET_STREAK = 3  # <--- 請在這裡修改您要的天數 (例如 30)
-ACHIEVEMENT_CODE = f"ACHIEVE_{TARGET_STREAK}DAYS" # 產生一個獨特的代碼
+# --- 🏆 自動發獎系統 ---
+TARGET_STREAK = 30  # 設定目標天數
+ACHIEVEMENT_CODE = f"ACHIEVE_{TARGET_STREAK}DAYS" 
 
 try:
     coupon_df = conn.read(worksheet="Coupons", ttl=0)
@@ -201,25 +196,22 @@ try:
 except:
     coupon_df = pd.DataFrame(columns=["Code", "Prize", "Detail", "Status", "Date"])
 
-# 檢查是否達成條件 & 尚未領取
+# 檢查是否達成條件
 if current_streak >= TARGET_STREAK:
-    # 檢查是否已經有這個代碼
     if not coupon_df.empty and ACHIEVEMENT_CODE in coupon_df["Code"].values:
-        pass # 已經領過了，沒事
+        pass 
     else:
-        # --- 自動發放獎勵 ---
         new_reward = pd.DataFrame([{
             "Code": ACHIEVEMENT_CODE,
             "Prize": f"🏆 {TARGET_STREAK}天連續記帳獎勵",
-            "Detail": f"太棒了！你已經連續記帳 {TARGET_STREAK} 天。這是給你的堅持小禮物！請老公帶妳去吃好吃的！",
-            "Status": "持有中", # 直接放入背包
+            "Detail": f"親愛的，太厲害了！\n竟然連續 {TARGET_STREAK} 天都記得記帳。\n\n為了獎勵妳的持之以恆，這張卷可以兌換一個願望！\n\n愛妳的老公 敬上 ❤️",
+            "Status": "持有中", 
             "Date": taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
         }])
         
         final_coupons = pd.concat([coupon_df, new_reward], ignore_index=True)
         conn.update(worksheet="Coupons", data=final_coupons)
         
-        # 強制重整以顯示慶祝
         st.toast(f"🎉 恭喜！達成 {TARGET_STREAK} 天連勝！獲得神祕禮物！")
         st.balloons()
         time.sleep(2)
@@ -228,10 +220,17 @@ if current_streak >= TARGET_STREAK:
 # --- 側邊欄 ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
+    # 1. 戀愛天數
     love_days = (taiwan_date - date(2019, 6, 15)).days
     if love_days > 0: st.info(f"👩‍❤️‍👨 我們在一起 **{love_days}** 天囉！")
     
-    # 顯示連勝狀態
+    # 2. [修復] 寶寶倒數
+    baby_days = (taiwan_date - date(2025, 9, 12)).days
+    if baby_days > 0: st.success(f"👶 承淅來到地球 **{baby_days}** 天囉！")
+    elif baby_days == 0: st.success("🎂 就是今天！寶寶誕生啦！")
+    else: st.warning(f"👶 距離寶寶出生還有 **{-baby_days}** 天")
+
+    # 3. 連勝天數
     st.metric("🔥 記帳連勝", f"{current_streak} 天")
     if current_streak >= TARGET_STREAK:
         st.caption(f"✨ 已達成 {TARGET_STREAK} 天目標！")
