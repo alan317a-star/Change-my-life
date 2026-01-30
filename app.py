@@ -33,62 +33,63 @@ def add_apple_touch_icon(image_path):
 
 add_apple_touch_icon("icon.png")
 
-# --- CSS 優化 (iOS 修復版) ---
+# --- CSS 優化 (iOS 強制修復版) ---
 st.markdown("""
     <style>
-    /* =================================
-       🔥 iOS 側邊欄按鈕修復專區
-       ================================= */
+    /* ============================================================
+       🔥 iOS 側邊欄按鈕 - 終極修復
+       我們不隱藏 Header，而是把它變透明，並強制讓按鈕顯色
+       ============================================================ */
     
-    /* 1. 讓 Header 區域存在但透明 (這樣按鈕才有地方放) */
+    /* 1. Header 設定為透明，但必須「存在」 */
     header[data-testid="stHeader"] {
-        background-color: transparent !important;
-        z-index: 99999 !important; /* 確保在最上層 */
+        background-color: rgba(255, 255, 255, 0.0) !important; /* 完全透明 */
+        z-index: 999999 !important; /* 確保在最上層，不被遮擋 */
+        height: 3.5rem !important; /* 確保有高度讓按鈕點擊 */
     }
-    
-    /* 2. 【關鍵】強制顯示左上角的側邊欄開關按鈕 (箭頭/漢堡) */
-    [data-testid="collapsedControl"] {
-        visibility: visible !important;
+
+    /* 2. 針對所有 Header 內的按鈕 (包含漢堡選單/箭頭) */
+    header[data-testid="stHeader"] button {
+        color: #000000 !important; /* 強制設定為黑色，避免白底白字看不見 */
+        background-color: rgba(255, 255, 255, 0.5) !important; /* 給按鈕一個半透明背景，增加可見度 */
+        border-radius: 50% !important; /* 圓形背景 */
+        z-index: 1000000 !important; /* 比 Header 更高 */
         display: block !important;
-        color: #000000 !important; /* 設定按鈕顏色為黑色，避免看不見 */
-        left: 10px !important;
-        top: 10px !important;
+        visibility: visible !important;
     }
 
-    /* 3. 隱藏右上角的三點選單、Deploy、Running */
+    /* 3. 特別針對「收合/展開」的控制項 */
+    [data-testid="collapsedControl"] {
+        color: #000000 !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    /* 4. 隱藏右上角的三點選單 & Deploy (只留左邊的) */
     [data-testid="stToolbar"] {
-        visibility: hidden !important; 
         display: none !important;
     }
     
-    /* 4. 隱藏頂部彩虹裝飾線 */
+    /* 5. 隱藏頂部彩虹線 */
     [data-testid="stDecoration"] {
-        visibility: hidden !important;
         display: none !important;
     }
 
-    /* 5. 隱藏底部 Footer */
-    footer {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    
-    /* 6. 隱藏右下角浮水印 */
-    [data-testid="stStatusWidget"] {
-        visibility: hidden !important;
-    }
-    .viewerBadge_container__1QSob {
-        display: none !important;
-    }
-    #MainMenu {
-        visibility: hidden !important;
-    }
-    
     /* =================================
-       📱 手機版面調整
+       📱 其他介面優化
        ================================= */
+    
+    /* 隱藏 Footer */
+    footer { display: none !important; }
+    
+    /* 隱藏右下角浮水印 */
+    [data-testid="stStatusWidget"] { display: none !important; }
+    .viewerBadge_container__1QSob { display: none !important; }
+    #MainMenu { display: none !important; }
+    
+    /* 版面微調 */
     .block-container {
-        padding-top: 3rem !important; /* 留一點空間給左上角按鈕 */
+        padding-top: 3.5rem !important; /* 留位置給上方按鈕 */
         padding-bottom: 5rem !important;
     }
     
@@ -138,7 +139,7 @@ st.markdown("""
         border-radius: 12px !important;
     }
     
-    /* 背包標題樣式 (綠色-持有中) */
+    /* 背包標題 */
     .backpack-item-title {
         font-size: 20px !important;
         font-weight: 900 !important;
@@ -146,7 +147,7 @@ st.markdown("""
         margin-bottom: 5px !important;
     }
     
-    /* 歷史標題樣式 (灰色-已使用) */
+    /* 歷史標題 */
     .history-item-title {
         font-size: 18px !important;
         font-weight: bold !important;
@@ -155,7 +156,7 @@ st.markdown("""
         margin-bottom: 5px !important;
     }
     
-    /* 信件內容樣式 */
+    /* 信件內容 */
     .letter-box {
         background-color: #fff9f0;
         border: 2px dashed #FFB74D;
