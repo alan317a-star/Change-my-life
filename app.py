@@ -101,12 +101,12 @@ st.markdown("""
         margin-bottom: 5px !important;
     }
     
-    /* [新增] 歷史標題樣式 (灰色-已使用) */
+    /* 歷史標題樣式 (灰色-已使用) */
     .history-item-title {
         font-size: 18px !important;
         font-weight: bold !important;
-        color: #757575 !important; /* 灰色 */
-        text-decoration: line-through; /* 刪除線效果 */
+        color: #757575 !important; 
+        text-decoration: line-through; 
         margin-bottom: 5px !important;
     }
     
@@ -207,7 +207,7 @@ TARGET_STREAK = 21
 ACHIEVEMENT_CODE = f"ACHIEVE_{TARGET_STREAK}DAYS" 
 
 try:
-    # 讀取 Coupons (容錯處理)
+    # 讀取 Coupons
     coupon_df = conn.read(worksheet="Coupons", ttl=0)
     if "Detail" not in coupon_df.columns: coupon_df["Detail"] = ""
 except:
@@ -430,9 +430,7 @@ with tab4:
         inventory = coupon_df[coupon_df["Status"] == "持有中"]
         if not inventory.empty:
             for i, row in inventory.iterrows():
-                # 每個物品一張卡片
                 with st.container(border=True):
-                    # 上半部：標題 + 按鈕
                     c1, c2 = st.columns([2.5, 1]) 
                     with c1:
                         st.markdown(f'<div class="backpack-item-title">🎁 {row["Prize"]}</div>', unsafe_allow_html=True)
@@ -449,7 +447,6 @@ with tab4:
                             time.sleep(1); st.rerun()
                         st.markdown('</div>', unsafe_allow_html=True)
                     
-                    # 下半部：展開信件 (如果有內容)
                     detail_content = str(row['Detail'])
                     if len(detail_content) > 1 and detail_content != "nan":
                         with st.expander("💌 點擊閱讀信件內容"):
@@ -464,7 +461,7 @@ with tab4:
     if not coupon_df.empty:
         history = coupon_df[coupon_df["Status"] == "已使用"]
         if not history.empty:
-            # 倒序排列 (最新的在最上面)
+            # 倒序排列
             history = history.sort_values("Date", ascending=False)
             
             for i, row in history.iterrows():
@@ -472,10 +469,17 @@ with tab4:
                     st.markdown(f'<div class="history-item-title">{row["Prize"]}</div>', unsafe_allow_html=True)
                     st.caption(f"使用於: {row['Date']}")
                     
-                    # 歷史紀錄也可以看信
                     detail_content = str(row['Detail'])
                     if len(detail_content) > 1 and detail_content != "nan":
                         with st.expander("💌 回顧信件"):
                             st.markdown(f'<div class="letter-box" style="background-color:#f0f0f0; border-color:#aaa;">{detail_content}</div>', unsafe_allow_html=True)
         else:
             st.caption("尚無歷史紀錄")
+
+# --- Footer ---
+st.write("---")
+st.markdown("""
+    <div class="footer">
+        作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
+    </div>
+""", unsafe_allow_html=True)
