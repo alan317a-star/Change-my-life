@@ -33,65 +33,17 @@ def add_apple_touch_icon(image_path):
 
 add_apple_touch_icon("icon.png")
 
-# --- CSS 優化 (隱藏右上右下，保留左上側邊欄) ---
+# --- CSS 優化 ---
 st.markdown("""
     <style>
-    /* ============================================================
-       🔥 介面隱藏與修復區
-       ============================================================ */
+    /* 隱藏預設元素 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header[data-testid="stHeader"] {background-color: rgba(0,0,0,0); z-index: 999;}
     
-    /* 1. 隱藏右上角的 Fork 按鈕、三點選單、Deploy 按鈕 */
-    header[data-testid="stHeader"] {
-        background-color: transparent !important; /* 讓 Header 透明 */
-    }
-    
-    /* 隱藏 Header 裡面的工具列 (右上角那些) */
-    [data-testid="stToolbar"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    /* 隱藏頂部彩虹裝飾線 */
-    [data-testid="stDecoration"] {
-        display: none !important;
-    }
-
-    /* 2. 【關鍵】強制顯示左上角「>」側邊欄開關按鈕 */
-    /* 即使 Header 透明或被隱藏，這個按鈕必須保留且顯色 */
-    [data-testid="collapsedControl"] {
-        display: block !important;
-        visibility: visible !important;
-        color: #000000 !important; /* 強制黑色，避免白底看不見 */
-        z-index: 1000000 !important; /* 最上層 */
-        left: 10px !important;
-        top: 10px !important;
-    }
-
-    /* 3. 隱藏右下角浮水印 (皇冠、Manage App) */
-    [data-testid="stStatusWidget"] {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    .viewerBadge_container__1QSob {
-        display: none !important;
-    }
-
-    /* 4. 隱藏底部 Footer (Made with Streamlit) */
-    footer {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    
-    /* 隱藏漢堡選單 */
-    #MainMenu {
-        visibility: hidden !important;
-    }
-    
-    /* =================================
-       📱 版面調整
-       ================================= */
+    /* 手機版面調整 */
     .block-container {
-        padding-top: 3rem !important; /* 留空間給左上按鈕 */
+        padding-top: 3rem !important; 
         padding-bottom: 5rem !important;
     }
     
@@ -367,7 +319,7 @@ with tab1:
                     final_df = pd.concat([raw_df, new_row], ignore_index=True)
                     if "User" in final_df.columns: final_df = final_df.drop(columns=["User"])
                     conn.update(worksheet="Expenses", data=final_df)
-                    st.toast("✨ 記帳完成！")
+                    st.toast("✨ 恭喜啦~離成功又更近一步！")
                     conn.reset()
                     time.sleep(1); st.rerun()
                 except Exception as e: st.error(f"錯誤：{e}")
@@ -509,7 +461,9 @@ with tab4:
     if not coupon_df.empty:
         history = coupon_df[coupon_df["Status"] == "已使用"]
         if not history.empty:
+            # 倒序排列
             history = history.sort_values("Date", ascending=False)
+            
             for i, row in history.iterrows():
                 with st.container(border=True):
                     st.markdown(f'<div class="history-item-title">{row["Prize"]}</div>', unsafe_allow_html=True)
