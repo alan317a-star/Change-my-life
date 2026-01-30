@@ -7,25 +7,36 @@ import calendar
 import time
 import random
 
-# --- 1. 頁面設定 (關鍵修改在此) ---
+# --- 1. 頁面設定 ---
 st.set_page_config(
     page_title="Everyday Moments", 
-    page_icon="icon.png",  # <--- 這裡改成您的圖片檔名，記得圖片要上傳到同目錄
+    page_icon="icon.png", # 確保您有上傳 icon.png，否則請改回 "💰"
     layout="centered",
-    initial_sidebar_state="expanded" # <--- 改成 expanded，側邊欄就不會收起來了
+    initial_sidebar_state="collapsed" # 手機版建議預設收起，讓畫面乾淨，需要時再點箭頭打開
 )
 
-# --- CSS 極致 APP 化美化 ---
+# --- CSS 極致 APP 化美化 (修正側邊欄按鈕問題) ---
 st.markdown("""
     <style>
     /* === 1. 隱藏 Streamlit 預設元素 === */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    #MainMenu {visibility: hidden;} /* 隱藏右上角三個點點選單 */
+    footer {visibility: hidden;}    /* 隱藏底部 Made with Streamlit */
+    
+    /* [修正] 不要完全隱藏 header，改為背景透明 */
+    /* 這樣左上角的「>」側邊欄按鈕才會出現 */
+    header[data-testid="stHeader"] {
+        background-color: rgba(0,0,0,0); 
+        z-index: 1;
+    }
+    
+    /* 隱藏頂部的彩色橫條裝飾 */
+    .stApp > header {
+        background-color: transparent;
+    }
     
     /* === 2. 手機版面調整 === */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 3rem !important; /* 留一點空間給頂部的側邊欄按鈕 */
         padding-bottom: 5rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
@@ -137,7 +148,6 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # --- 讀取資料 (極速快取模式) ---
 try:
     df = conn.read(worksheet="Expenses", ttl=600)
-    
     if df.empty:
         df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
     else:
@@ -162,7 +172,7 @@ if not df.empty:
     last_month_str = last_month_end.strftime("%Y-%m")
     last_month_spent = df[df["Month"] == last_month_str]["Amount"].sum()
 
-# --- 側邊欄 (預設展開) ---
+# --- 側邊欄 (預設收起，按箭頭打開) ---
 with st.sidebar:
     st.header("⏳ 重要時刻")
     love_days = (taiwan_date - date(2019, 6, 15)).days
@@ -244,7 +254,7 @@ with tab1:
                         "Note": note_val
                     }])
                     
-                    # 確保沒有多餘的欄位
+                    # 確保沒有 User 欄位 (相容舊版)
                     final_df = pd.concat([raw_df, new_row], ignore_index=True)
                     if "User" in final_df.columns:
                         final_df = final_df.drop(columns=["User"])
