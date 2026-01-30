@@ -1,6 +1,5 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 from datetime import date, datetime, timedelta
@@ -13,12 +12,12 @@ import os
 # --- 1. 頁面設定 ---
 st.set_page_config(
     page_title="Everyday Moments", 
-    page_icon="icon.png", # 讀取您的貓咪圖示
+    page_icon="icon.png", 
     layout="centered",
-    initial_sidebar_state="expanded" # 側邊欄預設展開
+    initial_sidebar_state="expanded" 
 )
 
-# --- 🍎 專治 iPhone 主畫面圖示 (Base64 強制注入法) ---
+# --- 🍎 專治 iPhone 主畫面圖示 ---
 def add_apple_touch_icon(image_path):
     try:
         if os.path.exists(image_path):
@@ -34,7 +33,7 @@ def add_apple_touch_icon(image_path):
 
 add_apple_touch_icon("icon.png")
 
-# --- CSS 優化 (包含 Toast 正中間設定) ---
+# --- CSS 優化 ---
 st.markdown("""
     <style>
     /* === 1. 隱藏 Streamlit 預設元素 === */
@@ -47,10 +46,10 @@ st.markdown("""
         z-index: 999;
     }
     
-    /* 側邊欄背景色 */
-    section[data-testid="stSidebar"] {
-        background-color: #f8f9fa; 
-    }
+    /* [已刪除] 側邊欄背景色設定 
+       原本這裡有一段強制設定 background-color: #f8f9fa;
+       現在刪除後，它就會自動跟隨手機系統變成 深色/淺色！
+    */
 
     /* === 2. 手機版面調整 === */
     .block-container {
@@ -110,24 +109,24 @@ st.markdown("""
         border-radius: 10px !important;
     }
     
-    /* === 5. Toast 通知 (修正為正中間) === */
+    /* === 5. Toast 通知 (正中間) === */
     div[data-testid="stToast"] { 
         position: fixed !important;
-        top: 50% !important;        /* 垂直位置 50% */
-        left: 50% !important;       /* 水平位置 50% */
-        transform: translate(-50%, -50%) !important; /* 精準校正回正中間 */
+        top: 50% !important;        
+        left: 50% !important;       
+        transform: translate(-50%, -50%) !important; 
         
         width: auto !important;
-        min-width: 300px !important; /* 給個最小寬度，比較好看 */
-        max-width: 80vw !important;  /* 手機上不要太寬 */
+        min-width: 300px !important; 
+        max-width: 80vw !important;  
         
         border-radius: 20px !important; 
         background-color: rgba(255, 255, 255, 0.98) !important; 
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important; /* 加深陰影，更有立體感 */
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important; 
         border: 2px solid #FF4B4B !important;
         text-align: center !important;
         padding: 10px !important;
-        z-index: 999999 !important; /* 確保在最上層 */
+        z-index: 999999 !important; 
     }
     
     div[data-testid="stToast"] * { 
@@ -288,7 +287,7 @@ with tab1:
                     if "User" in final_df.columns:
                         final_df = final_df.drop(columns=["User"])
                     conn.update(worksheet="Expenses", data=final_df)
-                    st.toast("✨ 記帳開始，我們要成功了！")
+                    st.toast("✨ 記帳完成！")
                     conn.reset()
                     time.sleep(1); st.rerun()
                 except Exception as e: st.error(f"錯誤：{e}")
@@ -362,4 +361,3 @@ st.markdown("""
         作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
     </div>
 """, unsafe_allow_html=True)
-
