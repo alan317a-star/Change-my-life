@@ -33,50 +33,62 @@ def add_apple_touch_icon(image_path):
 
 add_apple_touch_icon("icon.png")
 
-# --- CSS 優化 (修正側邊欄消失問題) ---
+# --- CSS 優化 (iOS 修復版) ---
 st.markdown("""
     <style>
     /* =================================
-       🔥 UI 隱藏與優化區
+       🔥 iOS 側邊欄按鈕修復專區
        ================================= */
     
-    /* 1. 隱藏右上角選單 (三點)、Deploy 按鈕、頭像 */
-    /* 注意：不能隱藏 header，否則左上角的側邊欄按鈕會不見 */
+    /* 1. 讓 Header 區域存在但透明 (這樣按鈕才有地方放) */
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+        z-index: 99999 !important; /* 確保在最上層 */
+    }
+    
+    /* 2. 【關鍵】強制顯示左上角的側邊欄開關按鈕 (箭頭/漢堡) */
+    [data-testid="collapsedControl"] {
+        visibility: visible !important;
+        display: block !important;
+        color: #000000 !important; /* 設定按鈕顏色為黑色，避免看不見 */
+        left: 10px !important;
+        top: 10px !important;
+    }
+
+    /* 3. 隱藏右上角的三點選單、Deploy、Running */
     [data-testid="stToolbar"] {
-        visibility: hidden !important;
+        visibility: hidden !important; 
         display: none !important;
     }
     
-    /* 2. 隱藏頂部彩虹線 (Decoration) */
+    /* 4. 隱藏頂部彩虹裝飾線 */
     [data-testid="stDecoration"] {
         visibility: hidden !important;
         display: none !important;
     }
 
-    /* 3. 強力隱藏底部 Footer (Made with Streamlit) */
+    /* 5. 隱藏底部 Footer */
     footer {
         visibility: hidden !important;
         display: none !important;
     }
     
-    /* 4. 隱藏右下角浮水印 (皇冠、管理按鈕、查看器) */
+    /* 6. 隱藏右下角浮水印 */
     [data-testid="stStatusWidget"] {
         visibility: hidden !important;
-        display: none !important;
     }
     .viewerBadge_container__1QSob {
         display: none !important;
     }
     #MainMenu {
         visibility: hidden !important;
-        display: none !important;
     }
     
     /* =================================
        📱 手機版面調整
        ================================= */
     .block-container {
-        padding-top: 2rem !important; 
+        padding-top: 3rem !important; /* 留一點空間給左上角按鈕 */
         padding-bottom: 5rem !important;
     }
     
