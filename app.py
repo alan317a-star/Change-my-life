@@ -11,9 +11,9 @@ import random
 # --- 1. 頁面設定 ---
 st.set_page_config(
     page_title="Everyday Moments", 
-    page_icon="app_logo.png", # 這裡會讀取您上傳到 GitHub 的貓咪圖片
+    page_icon="app_logo.png",  # <--- 檔名一定要改！強迫瀏覽器重新抓取
     layout="centered",
-    initial_sidebar_state="collapsed" # 手機版預設收起側邊欄
+    initial_sidebar_state="collapsed"
 )
 
 # --- CSS 極致 APP 化美化 (修正側邊欄按鈕問題) ---
@@ -335,4 +335,5 @@ st.markdown("""
         作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
     </div>
 """, unsafe_allow_html=True)
+
 
