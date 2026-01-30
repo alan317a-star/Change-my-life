@@ -224,4 +224,103 @@ with tab1:
     st.markdown("### 😈 每一筆錢都要花得值得！")
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
-        with col1: date_val = st.date_input("📅 日期", taiwan_
+        with col1: date_val = st.date_input("📅 日期", taiwan_date)
+        with col2: cat_val = st.selectbox("📂 分類", ["🍔 飲食 (三餐/飲料)", "🛒 日用 (超市/藥妝)", "🚗 交通 (車票/加油)", "🏠 居家 (房貸/水電)", "👗 服飾 (衣物/鞋包)", "💆‍♂️ 醫療 (看診/藥品)", "🎮 娛樂 (旅遊/遊戲)", "📚 教育 (書籍/課程)", "💼 保險稅務", "👶 子女 (尿布/學費)", "💸 其他"])
+        amount_val = st.number_input("💲 金額", min_value=0, step=10, format="%d")
+        note_val = st.text_input("📝 備註")
+        st.markdown('<div class="save-btn">', unsafe_allow_html=True)
+        submitted = st.form_submit_button("💾 確認儲存")
+        st.markdown('</div>', unsafe_allow_html=True)
+        if submitted:
+            if amount_val > 0:
+                try:
+                    raw_df = conn.read(worksheet="Expenses", ttl=0)
+                    if raw_df.empty: raw_df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
+                    
+                    new_row = pd.DataFrame([{
+                        "Date": f"{date_val} {taiwan_now.strftime('%H:%M:%S')}", 
+                        "Category": cat_val, 
+                        "Amount": amount_val, 
+                        "Note": note_val
+                    }])
+                    
+                    # 確保沒有多餘的欄位
+                    final_df = pd.concat([raw_df, new_row], ignore_index=True)
+                    if "User" in final_df.columns:
+                        final_df = final_df.drop(columns=["User"])
+
+                    conn.update(worksheet="Expenses", data=final_df)
+                    st.toast("✨ 記帳完成！")
+                    conn.reset()
+                    time.sleep(1); st.rerun()
+                except Exception as e: st.error(f"錯誤：{e}")
+
+    with st.expander("記錯帳按這邊 (快速復原)", expanded=False):
+        st.markdown('<div class="del-btn">', unsafe_allow_html=True)
+        if st.button("↩️ 刪除最後一筆紀錄 (Undo)"):
+            try:
+                raw_df = conn.read(worksheet="Expenses", ttl=0)
+                if not raw_df.empty:
+                    conn.update(worksheet="Expenses", data=raw_df.iloc[:-1])
+                    st.toast("已刪除最後一筆紀錄")
+                    conn.reset()
+                    time.sleep(1); st.rerun()
+                else: st.warning("無紀錄可刪")
+            except Exception as e: st.error(f"刪除失敗: {e}")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# === Tab 2: 分析 ===
+with tab2:
+    if not df.empty:
+        selected_month = st.selectbox("🗓️ 選擇月份", ["全部"] + sorted(df["Month"].dropna().unique(), reverse=True))
+        plot_df = df if selected_month == "全部" else df[df["Month"] == selected_month]
+        st.metric(f"總支出", f"${plot_df['Amount'].sum():,.0f}")
+        if not plot_df.empty:
+            fig = px.pie(plot_df.groupby("Category")["Amount"].sum().reset_index(), values="Amount", names="Category", hole=0.4)
+            st.plotly_chart(fig, use_container_width=True)
+    else: st.info("尚無資料")
+
+# === Tab 3: 列表 ===
+with tab3:
+    st.subheader("📋 最近紀錄")
+    if not df.empty:
+        df_display = df.copy()
+        df_display['orig_idx'] = df_display.index
+        df_display = df_display.sort_values("Date", ascending=False).head(20)
+        for _, row in df_display.iterrows():
+            with st.container(border=True):
+                c1, c2, c3 = st.columns([3, 1.5, 1.1])
+                with c1:
+                    st.markdown(f'<div class="card-title">{row["Category"]}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="card-note">{row["Date"]} | {row["Note"]}</div>', unsafe_allow_html=True)
+                with c2: st.markdown(f'<div class="card-amount">${row["Amount"]:,.0f}</div>', unsafe_allow_html=True)
+                with c3:
+                    if st.session_state["delete_verify_idx"] == row['orig_idx']:
+                        sub_c1, sub_c2 = st.columns(2)
+                        with sub_c1:
+                            if st.button("✅", key=f"conf_{row['orig_idx']}", type="primary"):
+                                try:
+                                    fresh_df = conn.read(worksheet="Expenses", ttl=0)
+                                    conn.update(worksheet="Expenses", data=fresh_df.drop(row['orig_idx']))
+                                    st.toast("🗑️ 已成功刪除")
+                                    st.session_state["delete_verify_idx"] = None
+                                    conn.reset()
+                                    time.sleep(1); st.rerun()
+                                except Exception as e: st.error(f"失敗：{e}")
+                        with sub_c2:
+                            if st.button("❌", key=f"cancel_{row['orig_idx']}"):
+                                st.session_state["delete_verify_idx"] = None
+                                st.rerun()
+                    else:
+                        if st.button("🗑️", key=f"del_{row['orig_idx']}"):
+                            st.session_state["delete_verify_idx"] = row['orig_idx']
+                            st.rerun()
+    else: st.info("尚無資料")
+
+# --- Footer ---
+st.write("---")
+st.markdown("""
+    <div class="footer">
+        作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
+    </div>
+""", unsafe_allow_html=True)
