@@ -33,44 +33,54 @@ def add_apple_touch_icon(image_path):
 
 add_apple_touch_icon("icon.png")
 
-# --- CSS 優化 (iOS 強制修復版) ---
+# --- CSS 優化 (iOS 強力顯色版) ---
 st.markdown("""
     <style>
     /* ============================================================
-       🔥 iOS 側邊欄按鈕 - 終極修復
-       我們不隱藏 Header，而是把它變透明，並強制讓按鈕顯色
+       🔥 iOS 側邊欄按鈕 - 強力顯色修正
        ============================================================ */
     
-    /* 1. Header 設定為透明，但必須「存在」 */
+    /* 1. 讓 Header 透明，但保留空間 */
     header[data-testid="stHeader"] {
-        background-color: rgba(255, 255, 255, 0.0) !important; /* 完全透明 */
-        z-index: 999999 !important; /* 確保在最上層，不被遮擋 */
-        height: 3.5rem !important; /* 確保有高度讓按鈕點擊 */
+        background-color: transparent !important;
+        pointer-events: none; /* 讓點擊穿透 Header，除了按鈕 */
     }
 
-    /* 2. 針對所有 Header 內的按鈕 (包含漢堡選單/箭頭) */
-    header[data-testid="stHeader"] button {
-        color: #000000 !important; /* 強制設定為黑色，避免白底白字看不見 */
-        background-color: rgba(255, 255, 255, 0.5) !important; /* 給按鈕一個半透明背景，增加可見度 */
-        border-radius: 50% !important; /* 圓形背景 */
-        z-index: 1000000 !important; /* 比 Header 更高 */
-        display: block !important;
-        visibility: visible !important;
-    }
-
-    /* 3. 特別針對「收合/展開」的控制項 */
+    /* 2. 針對「側邊欄開關按鈕」的容器 */
     [data-testid="collapsedControl"] {
-        color: #000000 !important;
         display: block !important;
         visibility: visible !important;
+        pointer-events: auto; /* 恢復按鈕可點擊 */
+        z-index: 1000002 !important; /* 最高層級 */
+        left: 10px !important;
+        top: 10px !important;
+        position: fixed !important; /* 固定在螢幕左上角 */
     }
 
-    /* 4. 隱藏右上角的三點選單 & Deploy (只留左邊的) */
+    /* 3. 針對「按鈕本體」做造型 (加白色圓底，防護罩) */
+    [data-testid="collapsedControl"] button {
+        background-color: rgba(255, 255, 255, 0.9) !important; /* 白色半透明背景 */
+        border-radius: 50% !important; /* 圓形 */
+        width: 3rem !important;
+        height: 3rem !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important; /* 加一點陰影讓它浮起來 */
+        border: 1px solid #ddd !important;
+    }
+
+    /* 4. 針對「箭頭圖標」強制變黑 */
+    [data-testid="collapsedControl"] svg {
+        fill: #000000 !important; /* 強制黑色 */
+        color: #000000 !important;
+        width: 1.5rem !important;
+        height: 1.5rem !important;
+    }
+
+    /* 5. 隱藏右上角 Toolbar (三點、Deploy) */
     [data-testid="stToolbar"] {
         display: none !important;
     }
     
-    /* 5. 隱藏頂部彩虹線 */
+    /* 6. 隱藏頂部彩虹線 */
     [data-testid="stDecoration"] {
         display: none !important;
     }
@@ -87,9 +97,9 @@ st.markdown("""
     .viewerBadge_container__1QSob { display: none !important; }
     #MainMenu { display: none !important; }
     
-    /* 版面微調 */
+    /* 版面微調 - 頂部留多一點空間給按鈕 */
     .block-container {
-        padding-top: 3.5rem !important; /* 留位置給上方按鈕 */
+        padding-top: 4.5rem !important; 
         padding-bottom: 5rem !important;
     }
     
