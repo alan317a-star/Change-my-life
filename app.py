@@ -288,7 +288,7 @@ with tab1:
                     if "User" in final_df.columns:
                         final_df = final_df.drop(columns=["User"])
                     conn.update(worksheet="Expenses", data=final_df)
-                    st.toast("✨ 記帳完成！")
+                    st.toast("✨ 記帳開始，我們要成功了！")
                     conn.reset()
                     time.sleep(1); st.rerun()
                 except Exception as e: st.error(f"錯誤：{e}")
@@ -362,3 +362,4 @@ st.markdown("""
         作者 <a href="https://line.me/ti/p/OSubE3tsH4" target="_blank" style="text-decoration:none; color:#cccccc;">LunGo.</a>
     </div>
 """, unsafe_allow_html=True)
+
