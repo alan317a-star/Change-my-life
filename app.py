@@ -56,7 +56,7 @@ st.markdown("""
         height: 50px !important;
     }
     
-    /* 下拉選單美化 */
+    /* 下拉選單 */
     div[data-baseweb="select"] > div {
         background-color: #fff9c4 !important;
         color: #000000 !important;
@@ -69,7 +69,7 @@ st.markdown("""
         font-size: 18px !important; 
     }
     
-    /* 按鈕通用設定 */
+    /* 按鈕通用 */
     div.stButton > button {
         width: 100%; height: 3.8em; font-size: 20px !important; font-weight: bold;
         border-radius: 15px; border: none; margin-top: 5px;
@@ -78,22 +78,34 @@ st.markdown("""
     }
     div.stButton > button:active { transform: scale(0.98); }
 
-    /* 各種按鈕顏色 */
     .save-btn > button { background: linear-gradient(135deg, #FF6B6B 0%, #FF4B4B 100%); color: white; }
     .del-btn > button { background-color: #6c757d; color: white; }
     .gift-btn > button { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; }
     
-    /* [修改] 使用按鈕 (配合右側佈局) */
+    /* 使用按鈕 */
     .use-btn > button { 
         background-color: #4CAF50 !important; 
         color: white !important; 
-        height: 100% !important; /* 填滿高度 */
-        min-height: 80px !important; /* 強制高度以配合左側文字 */
+        height: 100% !important; 
+        min-height: 80px !important;
         font-size: 18px !important;
         margin-top: 0px !important;
         border-radius: 12px !important;
     }
     
+    /* 信件內容樣式 */
+    .letter-box {
+        background-color: #fff;
+        border: 1px dashed #FF4B4B;
+        padding: 15px;
+        border-radius: 10px;
+        font-family: 'Courier New', Courier, monospace;
+        line-height: 1.6;
+        color: #555;
+        margin-top: 10px;
+        white-space: pre-wrap;
+    }
+
     /* Toast 通知 */
     div[data-testid="stToast"] { 
         position: fixed !important; top: 50% !important; left: 50% !important;       
@@ -128,7 +140,7 @@ st.markdown(f'<div class="quote-box">{st.session_state["current_quote"]}</div>',
 # --- 連線 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 讀取資料 ---
+# --- 讀取記帳資料 ---
 try:
     df = conn.read(worksheet="Expenses", ttl=600)
     if df.empty: df = pd.DataFrame(columns=["Date", "Category", "Amount", "Note"])
@@ -165,9 +177,12 @@ with st.sidebar:
     # 🎒 驚喜背包系統
     # ==========================================
     try:
+        # 讀取時增加容錯
         coupon_df = conn.read(worksheet="Coupons", ttl=0)
+        if "Detail" not in coupon_df.columns:
+            coupon_df["Detail"] = ""
     except:
-        coupon_df = pd.DataFrame(columns=["Code", "Prize", "Status", "Date"])
+        coupon_df = pd.DataFrame(columns=["Code", "Prize", "Detail", "Status", "Date"])
         
     # 1. 兌換輸入區
     with st.expander("🎁 輸入代碼領取獎品", expanded=False):
@@ -185,6 +200,7 @@ with st.sidebar:
                         current_status = target_row.at[idx, "Status"]
                         if current_status == "未使用":
                             prize = target_row.at[idx, "Prize"]
+                            # 更新狀態
                             coupon_df.at[idx, "Status"] = "持有中"
                             coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
                             conn.update(worksheet="Coupons", data=coupon_df)
@@ -202,35 +218,34 @@ with st.sidebar:
                     st.error("請建立 Coupons 分頁")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. 🎒 我的背包 (下拉選單 + 右側按鈕)
+    # 2. 🎒 我的背包 (修改為預設不顯示第一個內容)
     st.markdown("### 🎒 我的背包")
     if not coupon_df.empty:
-        # 篩選持有中的物品
         inventory = coupon_df[coupon_df["Status"] == "持有中"]
         
         if not inventory.empty:
-            # 製作選單選項： "獎品名稱 (領取日期)"
-            # 使用字典來對應 選項文字 -> 原始索引
+            # 製作選單 map
             item_map = {f"{row['Prize']} ({str(row['Date']).split(' ')[0]})": i for i, row in inventory.iterrows()}
             
-            # 下拉式選單
-            selected_item_label = st.selectbox("選擇要使用的物品", list(item_map.keys()))
+            # [修改點] 增加一個預設選項在最前面
+            placeholder_text = "👇 請選擇物品..."
+            options = [placeholder_text] + list(item_map.keys())
             
-            if selected_item_label:
+            # 顯示選單
+            selected_item_label = st.selectbox("選擇要使用的物品", options)
+            
+            # [邏輯判斷] 只有當使用者選的不是預設文字時，才顯示內容
+            if selected_item_label != placeholder_text:
                 idx = item_map[selected_item_label]
                 row = coupon_df.loc[idx]
                 
-                # 卡片呈現區塊 (左文 右鈕)
                 with st.container(border=True):
-                    c1, c2 = st.columns([2.2, 1]) # 左邊寬一點，右邊放按鈕
-                    
+                    c1, c2 = st.columns([2.2, 1]) 
                     with c1:
                         st.markdown(f"**🎁 {row['Prize']}**")
                         st.caption(f"領取於: {row['Date']}")
-                        
                     with c2:
                         st.markdown('<div class="use-btn">', unsafe_allow_html=True)
-                        # 這邊是使用按鈕
                         if st.button("✨ 使用", key=f"use_btn_{idx}"):
                             coupon_df.at[idx, "Status"] = "已使用"
                             coupon_df.at[idx, "Date"] = taiwan_now.strftime("%Y-%m-%d %H:%M:%S")
@@ -240,6 +255,13 @@ with st.sidebar:
                             conn.reset()
                             time.sleep(1); st.rerun()
                         st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # 長信件閱讀區
+                    detail_content = str(row['Detail'])
+                    if len(detail_content) > 1 and detail_content != "nan":
+                        with st.expander("📩 展開閱讀信件/內容"):
+                            st.markdown(f'<div class="letter-box">{detail_content}</div>', unsafe_allow_html=True)
+
         else:
             st.caption("🎒 背包空空的，快去輸入代碼！")
     
